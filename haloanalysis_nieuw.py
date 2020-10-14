@@ -80,7 +80,7 @@ class Params:
 					self.halolistpath =line[1]
 
 		#if self.runparams['Profiles']:
-		self.rad['profile'] = np.logspace(-3, np.log10(1.5), 60)#np.concatenate([np.logspace(-3, np.log10(0.5), 60), np.arange(0.6, self.rad['MaxRad'], 0.1)])
+		self.rad['profile'] = np.logspace(-3, np.log10(1), 61)#np.concatenate([np.logspace(-3, np.log10(0.5), 60), np.arange(0.6, self.rad['MaxRad'], 0.1)])
 
 		self.d_partType = {}
 		self.d_partType['particle_type'] = []
@@ -107,9 +107,13 @@ parser.add_argument("-c",action="store",dest="configfile",help="Configuration fi
 parser.add_argument("-s",action="store",dest="snapshot",help="Number of snapshot to analyse",required=True, type=int)
 parser.add_argument("-q",action="store",dest="Nfiles",help="Number of subfiles in the snapshot to look over",required=False, type=int)
 parser.add_argument("-n",action="store",dest="Nfilestart",help="Number of starting subfile number",required=False, type=int)
+parser.add_argument("-o",action="store",dest="Output",help="Output path",required=False, type=str)
+parser.add_argument("-f",action="store",dest="Haloes",help="Halo ID file",required=False, type=str)
 opt = parser.parse_args()
 param = Params(opt.configfile)
 
+if opt.Haloes is not None:
+    param.halolistpath = opt.Haloes
 halolist = None
 if param.halolistpath is not None:
 	halolist = np.loadtxt(param.halolistpath)
@@ -119,6 +123,9 @@ if opt.Nfiles is not None:
 	param.runparams['Nfiles'] = opt.Nfiles
 if opt.Nfilestart is not None:
 	param.runparams['Nfilestart'] = opt.Nfilestart
+if opt.Output is not None:
+    param.paths['outputpath'] = opt.Output
+print(param.paths['outputpath'],halolist[1])
 
 class Unbuffered(object):
    def __init__(self, stream):
@@ -139,7 +146,7 @@ if 'H' in param.d_partType['particle_type']:
 		velcopy_list.append(key)
 
 if param.runparams['VELcopy']:
-	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
+	catalog, haloes = vpt.ReadPropertyFile(param.paths['velpath'] + 
 		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list)
 	tree, numsnaps = ReadWalkableHDFTree(param.paths['treepath'], False)
 	haloproperties = {}
@@ -198,8 +205,8 @@ if param.runparams['VELcopy']:
 
 else:
 	print("Reading VELOCIraptor catalog")
-	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
-		'/snap_%04d.VELOCIraptor' %(opt.snapshot), ibinary=2, desiredfields=velcopy_list)
+	catalog, haloes = vpt.ReadPropertyFile(param.paths['velpath'] + 
+		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list)
 
 	print("Opening snapshot_%03d" %opt.snapshot)
 	d_snap = {}
@@ -221,7 +228,7 @@ else:
 		else:
 			nfilestart = None
 		print(nfiles)
-		nfiles = None
+		#nfiles = None
 		d_snap['File'] = Snapshot(param.paths['snappath'], opt.snapshot, d_partType = param.d_partType, 
 			read_only_header=read_only_header, nfiles=nfiles, nfilestart=nfilestart, physical=param.runparams['Physical'],
 			snapshottype=param.runparams['SnapshotType'])
@@ -286,6 +293,6 @@ else:
 			haloproperties, overwrite=False, convertVel = param.runparams['VELconvert'])
 
 	if param.runparams['Profiles'] and (param.runparams['VELconvert']==False):
-		writeDataToHDF5profiles(param.paths['outputpath'], profilename, haloproperties, overwrite=False)
+		writeDataToHDF5profiles(param.paths['outputpath'], profilename, haloproperties, overwrite=True)
 
 print("Finished")
