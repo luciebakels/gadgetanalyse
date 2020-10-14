@@ -233,7 +233,7 @@ else:
 			read_only_header=read_only_header, nfiles=nfiles, nfilestart=nfilestart, physical=param.runparams['Physical'],
 			snapshottype=param.runparams['SnapshotType'])
 		d_snap['redshift'] = d_snap['File'].redshift
-		if round(atime, 3) != round(1./(1.+d_snap['redshift'])):
+		if round(atime, 3) != round(1./(1.+d_snap['redshift']), 3):
 			print('atime:', atime, 1/(1.+d_snap['redshift']))
 			sys.exit("Incorrect snapshot - VR catalogue combination")
 		boxsize = d_snap['File'].boxsize
