@@ -208,9 +208,9 @@ else:
 	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
 		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list)
 
-	print("Opening snapshot_%03d" %opt.snapshot)
+	print("Opening snapshot_%03d" %(opt.snapshot+1))
 	d_snap = {}
-	d_snap['snapshot'] = opt.snapshot
+	d_snap['snapshot'] = opt.snapshot+1
 	read_only_header = False
 	if param.runparams['VELconvert']:
 		read_only_header = True
@@ -229,11 +229,13 @@ else:
 			nfilestart = None
 		print(nfiles)
 		#nfiles = None
-		d_snap['File'] = Snapshot(param.paths['snappath'], opt.snapshot, d_partType = param.d_partType, 
+		d_snap['File'] = Snapshot(param.paths['snappath'], opt.snapshot+1, d_partType = param.d_partType, 
 			read_only_header=read_only_header, nfiles=nfiles, nfilestart=nfilestart, physical=param.runparams['Physical'],
 			snapshottype=param.runparams['SnapshotType'])
 		d_snap['redshift'] = d_snap['File'].redshift
-		print('atime:', atime, 1/(1.+d_snap['redshift']))
+		if round(atime, 3) != round(1./(1.+d_snap['redshift'])):
+			print('atime:', atime, 1/(1.+d_snap['redshift']))
+			sys.exit("Incorrect snapshot - VR catalogue combination")
 		boxsize = d_snap['File'].boxsize
 		print('Boxsize: ', boxsize)
 	else:
