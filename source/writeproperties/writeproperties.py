@@ -40,6 +40,7 @@ def getHaloCoord(catalog, halo, z=0, snapshottype='GADGET', physical=False): #Mp
 		coords[1] = (catalog['Ycminpot'][halo])
 		coords[2] = (catalog['Zcminpot'][halo])
 	elif snapshottype in ['GADGET', 'Gadget', 'gadget']:
+		print('test if it goes here')
 		coords[0] = (catalog['Xcminpot'][halo])*h*(1+z)
 		coords[1] = (catalog['Ycminpot'][halo])*h*(1+z)
 		coords[2] = (catalog['Zcminpot'][halo])*h*(1+z)
@@ -299,11 +300,14 @@ def findHaloPropertiesInSnap_nieuw(catalog, d_snap, Nhalo=100, halolist=None,
 			break
 
 		halopropertiestemp = {}
-		coords = getHaloCoord(catalog, halo, z=d_snap['redshift'], snapshottype=d_runparams['SnapshotType'], physical=d_runparams['Physical'])
+		print('test box:', np.max(catalog['Xc'])*h*(1+d_snap['redshift']))
+		coords = getHaloCoord(catalog, halo, z=d_snap['redshift'], snapshottype=d_runparams['SnapshotType'], 
+			physical=d_runparams['Physical'])
 
 		coords = coords%boxsize
 		radhier = getHaloRadius(catalog, halo, z=d_snap['redshift'], 
-			rtype = d_radius['Rchoice'], snapshottype=d_runparams['SnapshotType'], physical=d_runparams['Physical'])
+			rtype = d_radius['Rchoice'], snapshottype=d_runparams['SnapshotType'], 
+			physical=d_runparams['Physical'])
 		satellite = False
 
 		#Trusting VELOCIraptor not to falsely identify haloes as satellites
