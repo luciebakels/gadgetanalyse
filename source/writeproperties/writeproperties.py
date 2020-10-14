@@ -40,7 +40,6 @@ def getHaloCoord(catalog, halo, z=0, snapshottype='GADGET', physical=False): #Mp
 		coords[1] = (catalog['Ycminpot'][halo])
 		coords[2] = (catalog['Zcminpot'][halo])
 	elif snapshottype in ['GADGET', 'Gadget', 'gadget']:
-		print('test if it goes here')
 		coords[0] = (catalog['Xcminpot'][halo])*h*(1+z)
 		coords[1] = (catalog['Ycminpot'][halo])*h*(1+z)
 		coords[2] = (catalog['Zcminpot'][halo])*h*(1+z)
