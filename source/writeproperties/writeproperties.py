@@ -290,16 +290,15 @@ def findHaloPropertiesInSnap_nieuw(catalog, d_snap, Nhalo=100, halolist=None,
 	halo_i = -1
 	for halo in haloindices:
 		halo_i += 1
-		if halolist is not None:
-			print('Computing properties for halo %i'%halo)
-		elif halo%10000==0:
+		#if halolist is not None:
+		#	print('Computing properties for halo %i'%halo)
+		if halo%10000==0:
 			print('Computing properties for halo %i-%i' %(halo, halo+10000))
 		if halo > len(catalog['Xc'])-1:
 			print("Nhalo > N(velociraptor haloes)")
 			break
 
 		halopropertiestemp = {}
-		print('test box:', np.max(catalog['Xc'])*h*(1+d_snap['redshift']))
 		coords = getHaloCoord(catalog, halo, z=d_snap['redshift'], snapshottype=d_runparams['SnapshotType'], 
 			physical=d_runparams['Physical'])
 
