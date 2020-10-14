@@ -146,7 +146,7 @@ if 'H' in param.d_partType['particle_type']:
 		velcopy_list.append(key)
 
 if param.runparams['VELcopy']:
-	catalog, haloes = vpt.ReadPropertyFile(param.paths['velpath'] + 
+	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
 		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list)
 	tree, numsnaps = ReadWalkableHDFTree(param.paths['treepath'], False)
 	haloproperties = {}
@@ -205,7 +205,7 @@ if param.runparams['VELcopy']:
 
 else:
 	print("Reading VELOCIraptor catalog")
-	catalog, haloes = vpt.ReadPropertyFile(param.paths['velpath'] + 
+	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
 		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list)
 
 	print("Opening snapshot_%03d" %opt.snapshot)
