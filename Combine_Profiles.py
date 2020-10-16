@@ -46,20 +46,20 @@ def read_profiles(path = '/home/luciebakels/DMO11/Profiles/'):
 		if 'HaloID' in profiles:
 			start_time = time.time()
 			waarvervang = np.where(profiles['HaloID'] == -1)[0]
-			print("--- %s seconds ---" % (time.time() - start_time), 'HaloID')
+			#print("--- %s seconds ---" % (time.time() - start_time), 'HaloID')
 			start_time = time.time()
 			npart = haloprop['Npart_profile'.encode('utf-8')][:]
-			print("--- %s seconds ---" % (time.time() - start_time), 'npart')
+			#print("--- %s seconds ---" % (time.time() - start_time), 'npart')
 			start_time = time.time()
 			npartprevious = profiles['Npart_profile']
-			print("--- %s seconds ---" % (time.time() - start_time), 'npartprevious')
+			#print("--- %s seconds ---" % (time.time() - start_time), 'npartprevious')
 			start_time = time.time()
 			nietnul = np.where(npart+npartprevious>0)[0]
 			npartnietnul = npart[nietnul] + npartprevious[nietnul]
-			print("--- %s seconds ---" % (time.time() - start_time), 'nietnul')
+			#print("--- %s seconds ---" % (time.time() - start_time), 'nietnul')
 		for key in haloprop.id:
 			start_time = time.time()
-			print(key)
+			#print(key)
 			if key in ['AngularMomentum', 'Velrad']:
 				temp = haloprop[key][:].astype(float32)
 			else:
@@ -76,7 +76,7 @@ def read_profiles(path = '/home/luciebakels/DMO11/Profiles/'):
 				profiles[key.decode('utf-8')][nietnul] = (stukje)/npartnietnul
 			else:
 				profiles[key.decode('utf-8')] += haloprop[key]
-			print("--- %s seconds ---" % (time.time() - start_time), 'key')
+			#print("--- %s seconds ---" % (time.time() - start_time), 'key')
 		haloprop.close()
 	return profiles
 
