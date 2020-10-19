@@ -265,7 +265,7 @@ else:
 			iparttypes = 1
 		partdata = ReadParticleDataFile(param.paths['velpath'] + 
 			'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), 
-			ibinary=2, iparttypes=iparttypes, unbound=True, selected_files=selected_files)
+			iparttypes=iparttypes, unbound=True, selected_files=selected_files)
 	elif param.runparams['ParticleDataType'] == 'Bound' and len(catalog['Mass_200crit'])>0:
 		print("Reading particle data")
 		iparttypes = 0
@@ -273,7 +273,7 @@ else:
 			iparttypes = 1
 		partdata = ReadParticleDataFile(param.paths['velpath'] + 
 			'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), 
-			ibinary=2, iparttypes=iparttypes, unbound=False, selected_files=selected_files)
+			iparttypes=iparttypes, unbound=False, selected_files=selected_files)
 	if param.runparams['TreeData']:
 		print("Reading walkable tree")
 		tree, numsnaps = ReadWalkableHDFTree(param.paths['treepath'], False)
