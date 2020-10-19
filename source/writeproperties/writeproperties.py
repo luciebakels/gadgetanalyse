@@ -1153,10 +1153,10 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
     subfilenames=[""]
     if (iseparatesubfiles==1): subfilenames=["",".sublevels"]
     for ifile in range(numfiles):
-    	if selected_files is not None:
-    		ifile_temp = selected_files[ifile]
-    	else:
-    		ifile_temp = ifile
+        if selected_files is not None:
+            ifile_temp = selected_files[ifile]
+        else:
+            ifile_temp = ifile
         for subname in subfilenames:
             bfname=basefilename+subname
             gfilename=bfname+".catalog_groups"
