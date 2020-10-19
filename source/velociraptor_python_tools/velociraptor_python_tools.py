@@ -30,7 +30,7 @@ Routines for reading velociraptor output
 """
     IO Routines
 """
-def ReadPropertyFile(basefilename,ibinary=0,iseparatesubfiles=0,iverbose=0, desiredfields=[]):
+def ReadPropertyFile(basefilename,iseparatesubfiles=0,iverbose=1, desiredfields=[], onefile=None):
     """
     VELOCIraptor/STF files in various formats
     for example ascii format contains
@@ -60,6 +60,8 @@ def ReadPropertyFile(basefilename,ibinary=0,iseparatesubfiles=0,iverbose=0, desi
         numfiles=0
     else:
         filename=basefilename+".properties"+".0"
+        if onefile is not None:
+            filename = basefilename + ".properties.%i" %onefile
         inompi=False
         if (os.path.isfile(filename)==False):
             print("file not found")
@@ -70,135 +72,51 @@ def ReadPropertyFile(basefilename,ibinary=0,iseparatesubfiles=0,iverbose=0, desi
     fieldtype=[]
     fieldindex=[]
 
-    if (ibinary==0):
-        #load ascii file
-        halofile = open(filename, 'r')
-        #read header information
-        [filenum,numfiles]=halofile.readline().split()
-        filenum=int(filenum);numfiles=int(numfiles)
-        [numhalos, numtothalos]= halofile.readline().split()
-        numhalos=np.uint64(numhalos);numtothalos=np.uint64(numtothalos)
-        names = ((halofile.readline())).split()
-        #remove the brackets in ascii file names
-        fieldnames= [fieldname.split("(")[0] for fieldname in names]
-        for i in np.arange(fieldnames.__len__()):
-            fieldname=fieldnames[i]
-            if fieldname in ["ID","hostHalo","numSubStruct","npart","n_gas","n_star"]:
-                fieldtype.append(np.uint64)
-            elif fieldname in ["ID_mbp"]:
-                fieldtype.append(np.int64)
-            else:
-                fieldtype.append(np.float64)
-        halofile.close()
-        #if desiredfields is NULL load all fields
-        #but if this is passed load only those fields
-        if (len(desiredfields)>0):
-            lend=len(desiredfields)
-            fieldindex=np.zeros(lend,dtype=int)
-            desiredfieldtype=[[] for i in range(lend)]
-            for i in range(lend):
-                fieldindex[i]=fieldnames.index(desiredfields[i])
-                desiredfieldtype[i]=fieldtype[fieldindex[i]]
-            fieldtype=desiredfieldtype
-            fieldnames=desiredfields
-        #to store the string containing data format
-        fieldtypestring=''
-        for i in np.arange(fieldnames.__len__()):
-            if fieldtype[i]==np.uint64: fieldtypestring+='u8,'
-            elif fieldtype[i]==np.int64: fieldtypestring+='i8,'
-            elif fieldtype[i]==np.float64: fieldtypestring+='f8,'
-
-    elif (ibinary==1):
-        #load binary file
-        halofile = open(filename, 'rb')
-        [filenum,numfiles]=np.fromfile(halofile,dtype=np.int32,count=2)
-        [numhalos,numtothalos]=np.fromfile(halofile,dtype=np.uint64,count=2)
-        headersize=np.fromfile(halofile,dtype=np.int32,count=1)[0]
-        byteoffset=np.dtype(np.int32).itemsize*3+np.dtype(np.uint64).itemsize*2+4*headersize
-        for i in range(headersize):
-            fieldnames.append(unpack('s', halofile.read(CHARSIZE)).strip())
-        for i in np.arange(fieldnames.__len__()):
-            fieldname=fieldnames[i]
-            if fieldname in ["ID","hostHalo","numSubStruct","npart","n_gas","n_star"]:
-                fieldtype.append(np.uint64)
-            elif fieldname in ["ID_mbp"]:
-                fieldtype.append(np.int64)
-            else:
-                fieldtype.append(np.float64)
-        halofile.close()
-        #if desiredfields is NULL load all fields
-        #but if this is passed load only those fields
-        if (len(desiredfields)>0):
-            lend=len(desiredfields)
-            fieldindex=np.zeros(lend,dtype=int)
-            desiredfieldtype=[[] for i in range(lend)]
-            for i in range(lend):
-                fieldindex[i]=fieldnames.index(desiredfields[i])
-                desiredfieldtype[i]=fieldtype[fieldindex[i]]
-            fieldtype=desiredfieldtype
-            fieldnames=desiredfields
-        #to store the string containing data format
-        fieldtypestring=''
-        for i in np.arange(fieldnames.__len__()):
-            if fieldtype[i]==np.uint64: fieldtypestring+='u8,'
-            elif fieldtype[i]==np.int64: fieldtypestring+='i8,'
-            elif fieldtype[i]==np.float64: fieldtypestring+='f8,'
-
-    elif (ibinary==2):
-        #load hdf file
-        halofile = h5py.File(filename, 'r')
-        filenum=int(halofile["File_id"][0])
-        numfiles=int(halofile["Num_of_files"][0])
-        numhalos=np.uint64(halofile["Num_of_groups"][0])
-        numtothalos=np.uint64(halofile["Total_num_of_groups"][0])
-        atime=np.float(halofile.attrs["Time"]) 
-        fieldnames=[str(n) for n in halofile.keys()]
-        #clean of header info
-        fieldnames.remove("File_id")
-        fieldnames.remove("Num_of_files")
-        fieldnames.remove("Num_of_groups")
-        if 'Total_num_of_groups' in fieldnames:
-            fieldnames.remove("Total_num_of_groups")
-        if 'Configuration' in fieldnames:
-            fieldnames.remove("Configuration")
-        if 'SimulationInfo' in fieldnames:
-            fieldnames.remove("SimulationInfo")
-        if 'UnitInfo' in fieldnames:
-            fieldnames.remove("UnitInfo")
+    #load hdf file
+    halofile = h5py.File(filename, 'r')
+    filenum=int(halofile["File_id"][0])
+    numfiles=int(halofile["Num_of_files"][0])
+    numhalos=np.uint64(halofile["Num_of_groups"][0])
+    numtothalos=np.uint64(halofile["Total_num_of_groups"][0])
+    atime=np.float(halofile.attrs["Time"]) 
+    fieldnames=[str(n) for n in halofile.keys()]
+    #clean of header info
+    fieldnames.remove("File_id")
+    fieldnames.remove("Num_of_files")
+    fieldnames.remove("Num_of_groups")
+    if 'Total_num_of_groups' in fieldnames:
+        fieldnames.remove("Total_num_of_groups")
+    if 'Configuration' in fieldnames:
+        fieldnames.remove("Configuration")
+    if 'SimulationInfo' in fieldnames:
+        fieldnames.remove("SimulationInfo")
+    if 'UnitInfo' in fieldnames:
+        fieldnames.remove("UnitInfo")
+    fieldtype=[halofile[fieldname].dtype for fieldname in fieldnames]
+    #if the desiredfields argument is passed only these fieds are loaded
+    if (len(desiredfields)>0):
+        if (iverbose):print("Loading subset of all fields in property file ", len(desiredfields), " instead of ", len(fieldnames))
+        fieldnames=desiredfields
         fieldtype=[halofile[fieldname].dtype for fieldname in fieldnames]
-        #if the desiredfields argument is passed only these fieds are loaded
-        if (len(desiredfields)>0):
-            if (iverbose):print("Loading subset of all fields in property file ", len(desiredfields), " instead of ", len(fieldnames))
-            fieldnames=desiredfields
-            fieldtype=[halofile[fieldname].dtype for fieldname in fieldnames]
-        halofile.close()
+    halofile.close()
 
     #allocate memory that will store the halo dictionary
-    catalog={fieldnames[i]:np.zeros(numtothalos,dtype=fieldtype[i]) for i in range(len(fieldnames))}
+    if onefile is None:
+        catalog={fieldnames[i]:np.zeros(numtothalos,dtype=fieldtype[i]) for i in range(len(fieldnames))}
+    else:
+        catalog={fieldnames[i]:np.zeros(numhalos,dtype=fieldtype[i]) for i in range(len(fieldnames))}
+        numfiles = 1
     noffset=np.uint64(0)
     for ifile in range(numfiles):
         if (inompi==True): filename=basefilename+".properties"
-        else: filename=basefilename+".properties"+"."+str(ifile)
+        elif (onefile is None): filename=basefilename+".properties"+"."+str(ifile)
         if (iverbose) : print("reading ",filename)
-        if (ibinary==0):
-            halofile = open(filename, 'r')
-            halofile.readline()
-            numhalos=np.uint64(halofile.readline().split()[0])
-            halofile.close()
-            if (numhalos>0):htemp = np.loadtxt(filename,skiprows=3, usecols=fieldindex, dtype=fieldtypestring, unpack=True)
-        elif(ibinary==1):
-            halofile = open(filename, 'rb')
-            np.fromfile(halofile,dtype=np.int32,count=2)
-            numhalos=np.fromfile(halofile,dtype=np.uint64,count=2)[0]
-            #halofile.seek(byteoffset);
-            if (numhalos>0):htemp=np.fromfile(halofile, usecols=fieldindex, dtype=fieldtypestring, unpack=True)
-            halofile.close()
-        elif(ibinary==2):
-            #here convert the hdf information into a numpy array
-            halofile = h5py.File(filename, 'r')
-            numhalos=np.uint64(halofile["Num_of_groups"][0])
-            if (numhalos>0):htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]
-            halofile.close()
+
+        #here convert the hdf information into a numpy array
+        halofile = h5py.File(filename, 'r')
+        numhalos=np.uint64(halofile["Num_of_groups"][0])
+        if (numhalos>0):htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]
+        halofile.close()
         #numhalos=len(htemp[0])
         for i in range(len(fieldnames)):
             catvalue=fieldnames[i]
@@ -210,24 +128,11 @@ def ReadPropertyFile(basefilename,ibinary=0,iseparatesubfiles=0,iverbose=0, desi
             if (inompi==True): filename=basefilename+".sublevels"+".properties"
             else: filename=basefilename+".sublevels"+".properties"+"."+str(ifile)
             if (iverbose) : print("reading ",filename)
-            if (ibinary==0):
-                halofile = open(filename, 'r')
-                halofile.readline()
-                numhalos=np.uint64(halofile.readline().split()[0])
-                halofile.close()
-                if (numhalos>0):htemp = np.loadtxt(filename,skiprows=3, usecols=fieldindex, dtype=fieldtypestring, unpack=True)
-            elif(ibinary==1):
-                halofile = open(filename, 'rb')
-                #halofile.seek(byteoffset);
-                np.fromfile(halofile,dtype=np.int32,count=2)
-                numhalos=np.fromfile(halofile,dtype=np.uint64,count=2)[0]
-                if (numhalos>0):htemp=np.fromfile(halofile, usecols=fieldindex, dtype=fieldtypestring, unpack=True)
-                halofile.close()
-            elif(ibinary==2):
-                halofile = h5py.File(filename, 'r')
-                numhalos=np.uint64(halofile["Num_of_groups"][0])
-                if (numhalos>0):htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]
-                halofile.close()
+
+            halofile = h5py.File(filename, 'r')
+            numhalos=np.uint64(halofile["Num_of_groups"][0])
+            if (numhalos>0):htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]
+            halofile.close()
             #numhalos=len(htemp[0])
             for i in range(len(fieldnames)):
                 catvalue=fieldnames[i]
