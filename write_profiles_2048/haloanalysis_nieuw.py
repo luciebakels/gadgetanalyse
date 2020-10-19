@@ -205,11 +205,8 @@ if param.runparams['VELcopy']:
 
 else:
 	print("Reading VELOCIraptor catalog")
-	if (param.runparams['Snapshot']) and ('Nfiles' in param.runparams) and ('Nfilestart' in param.runparams):
-		selected_files = np.arange(param.runparams['Nfilestart'], 
-				param.runparams['Nfilestart']+param.runparams['Nfiles'], 1).astype(int)
-	else:
-		selected_files = None
+	
+	selected_files = None
 
 	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
 		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), desiredfields=velcopy_list,
