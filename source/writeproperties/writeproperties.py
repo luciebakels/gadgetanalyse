@@ -1096,7 +1096,8 @@ def ReadParticleTypes(basefilename,iseparatesubfiles=0,iverbose=0, unbound=True)
 
     return particledata
     
-def ReadParticleDataFile(basefilename,ibinary=0,iseparatesubfiles=0,iparttypes=0,iverbose=0, binarydtype=np.int64, unbound=True):
+def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=0, binarydtype=np.int64, 
+	unbound=True, selected_files=None):
     """
     VELOCIraptor/STF catalog_group, catalog_particles and catalog_parttypes in various formats
 
@@ -1126,26 +1127,19 @@ def ReadParticleDataFile(basefilename,ibinary=0,iseparatesubfiles=0,iparttypes=0
     byteoffset=0
 
     #load header information from file to get total number of groups
-    #ascii
-    if (ibinary==0):
-        gfile = open(gfilename, 'r')
-        [filenum,numfiles]=gfile.readline().split()
-        filenum=int(filenum);numfiles=int(numfiles)
-        [numhalos, numtothalos]= gfile.readline().split()
-        numhalos=np.uint64(numhalos);numtothalos=np.uint64(numtothalos)
-    #binary
-    elif (ibinary==1):
-        gfile = open(gfilename, 'rb')
-        [filenum,numfiles]=np.fromfile(gfile,dtype=np.int32,count=2)
-        [numhalos,numtothalos]=np.fromfile(gfile,dtype=np.uint64,count=2)
-    #hdf
-    elif (ibinary==2):
-        gfile = h5py.File(gfilename, 'r')
-        filenum=int(gfile["File_id"][0])
-        numfiles=int(gfile["Num_of_files"][0])
-        numhalos=np.uint64(gfile["Num_of_groups"][0])
-        numtothalos=np.uint64(gfile["Total_num_of_groups"][0])
+    gfile = h5py.File(gfilename, 'r')
+    numfiles=int(gfile["Num_of_files"][0])
+    numtothalos=np.uint64(gfile["Total_num_of_groups"][0])
     gfile.close()
+
+    if selected_files is not None:
+        numtothalos = np.uint64(0)
+        numfiles = len(selected_files)
+        for ifile in selected_files:
+            filename = basefilename+".catalog_groups"+"."+str(ifile)
+            halofile = h5py.File(filename, 'r')
+            numtothalos += np.uint64(halofile["Num_of_groups"][0])
+            halofile.close()
 
     particledata=dict()
     particledata['Npart']=np.zeros(numtothalos,dtype=np.uint64)
@@ -1159,6 +1153,10 @@ def ReadParticleDataFile(basefilename,ibinary=0,iseparatesubfiles=0,iparttypes=0
     subfilenames=[""]
     if (iseparatesubfiles==1): subfilenames=["",".sublevels"]
     for ifile in range(numfiles):
+    	if selected_files is not None:
+    		ifile_temp = selected_files[ifile]
+    	else:
+    		ifile_temp = ifile
         for subname in subfilenames:
             bfname=basefilename+subname
             gfilename=bfname+".catalog_groups"
@@ -1167,106 +1165,35 @@ def ReadParticleDataFile(basefilename,ibinary=0,iseparatesubfiles=0,iparttypes=0
             tfilename=bfname+".catalog_parttypes"
             utfilename=tfilename+".unbound"
             if (inompi==False):
-                gfilename+="."+str(ifile)
-                pfilename+="."+str(ifile)
-                upfilename+="."+str(ifile)
-                tfilename+="."+str(ifile)
-                utfilename+="."+str(ifile)
-            if (iverbose) : print("reading",bfname,ifile)
+                gfilename+="."+str(ifile_temp)
+                pfilename+="."+str(ifile_temp)
+                upfilename+="."+str(ifile_temp)
+                tfilename+="."+str(ifile_temp)
+                utfilename+="."+str(ifile_temp)
+            if (iverbose) : print("reading",bfname,ifile_temp)
 
-            #ascii
-            if (ibinary==0):
-                gfile = open(gfilename, 'r')
-                #read header information
-                gfile.readline()
-                [numhalos,foo]= gfile.readline().split()
-                numhalos=np.uint64(numhalos)
-                gfile.close()
-                #load data
-                gdata=np.loadtxt(gfilename,skiprows=2,dtype=np.uint64)
-                numingroup=gdata[:numhalos]
-                offset=gdata[int(numhalos):int(2*numhalos)]
-                uoffset=gdata[int(2*numhalos):int(3*numhalos)]
-                #particle id data
-                pfile=open(pfilename, 'r')
-                pfile.readline()
-                [npart,foo]= pfile.readline().split()
-                npart=np.uint64(npart)
-                pfile.close()
-                piddata=np.loadtxt(pfilename,skiprows=2,dtype=np.int64)
-                upfile= open(upfilename, 'r')
-                upfile.readline()
-                [unpart,foo]= upfile.readline().split()
-                unpart=np.uint64(unpart)
-                upfile.close()
-                upiddata=np.loadtxt(upfilename,skiprows=2,dtype=np.int64)
-                if (iparttypes==1):
-                    #particle id data
-                    tfile= open(tfilename, 'r')
-                    tfile.readline()
-                    [npart,foo]= tfile.readline().split()
-                    tfile.close()
-                    tdata=np.loadtxt(tfilename,skiprows=2,dtype=np.uint16)
-                    utfile= open(utfilename, 'r')
-                    utfile.readline()
-                    [unpart,foo]= utfile.readline().split()
-                    utfile.close()
-                    utdata=np.loadtxt(utfilename,skiprows=2,dtype=np.uint16)
-            #binary
-            elif (ibinary==1):
-                gfile = open(gfilename, 'rb')
-                np.fromfile(gfile,dtype=np.int32,count=2)
-                [numhalos,foo]=np.fromfile(gfile,dtype=np.uint64,count=2)
-                #need to generalise to
-                numingroup=np.fromfile(gfile,dtype=binarydtype ,count=numhalos)
-                offset=np.fromfile(gfile,dtype=binarydtype,count=numhalos)
-                uoffset=np.fromfile(gfile,dtype=binarydtype,count=numhalos)
-                gfile.close()
-                pfile = open(pfilename, 'rb')
-                np.fromfile(pfile,dtype=np.int32,count=2)
-                [npart,foo]=np.fromfile(pfile,dtype=np.uint64,count=2)
-                piddata=np.fromfile(pfile,dtype=binarydtype ,count=npart)
-                pfile.close()
-                upfile = open(upfilename, 'rb')
-                np.fromfile(upfile,dtype=np.int32,count=2)
-                [unpart,foo]=np.fromfile(upfile,dtype=np.uint64,count=2)
-                upiddata=np.fromfile(upfile,dtype=binarydtype ,count=unpart)
-                upfile.close()
-                if (iparttypes==1):
-                    tfile = open(tfilename, 'rb')
-                    np.fromfile(tfile,dtype=np.int32,count=2)
-                    [npart,foo]=np.fromfile(tfile,dtype=np.uint16,count=2)
-                    tdata=np.fromfile(tfile,dtype=binarydtype ,count=npart)
-                    tfile.close()
-                    utfile = open(utfilename, 'rb')
-                    np.fromfile(utfile,dtype=np.int32,count=2)
-                    [unpart,foo]=np.fromfile(utfile,dtype=np.uint16,count=2)
-                    utdata=np.fromfile(utfile,dtype=binarydtype ,count=unpart)
-                    utfile.close()
-            #hdf
-            elif (ibinary==2):
-                gfile = h5py.File(gfilename, 'r')
-                numhalos=np.uint64(gfile["Num_of_groups"][0])
-                numingroup=np.uint64(gfile["Group_Size"])
-                offset=np.uint64(gfile["Offset"])
-                uoffset=np.uint64(gfile["Offset_unbound"])
-                gfile.close()
-                pfile = h5py.File(pfilename, 'r')
-                upfile = h5py.File(upfilename, 'r')
-                piddata=np.int64(pfile["Particle_IDs"])
-                upiddata=np.int64(upfile["Particle_IDs"])
-                npart=len(piddata)
-                unpart=len(upiddata)
+            gfile = h5py.File(gfilename, 'r')
+            numhalos=np.uint64(gfile["Num_of_groups"][0])
+            numingroup=np.uint64(gfile["Group_Size"])
+            offset=np.uint64(gfile["Offset"])
+            uoffset=np.uint64(gfile["Offset_unbound"])
+            gfile.close()
+            pfile = h5py.File(pfilename, 'r')
+            upfile = h5py.File(upfilename, 'r')
+            piddata=np.int64(pfile["Particle_IDs"])
+            upiddata=np.int64(upfile["Particle_IDs"])
+            npart=len(piddata)
+            unpart=len(upiddata)
 
-                pfile.close()
-                upfile.close()
-                if (iparttypes==1):
-                    tfile = h5py.File(tfilename, 'r')
-                    utfile = h5py.File(utfilename, 'r')
-                    tdata=np.uint16(tfile["Particle_types"])
-                    utdata=np.uint16(utfile["Particle_types"])
-                    tfile.close()
-                    utfile.close()
+            pfile.close()
+            upfile.close()
+            if (iparttypes==1):
+                tfile = h5py.File(tfilename, 'r')
+                utfile = h5py.File(utfilename, 'r')
+                tdata=np.uint16(tfile["Particle_types"])
+                utdata=np.uint16(utfile["Particle_types"])
+                tfile.close()
+                utfile.close()
 
 
             #now with data loaded, process it to produce data structure
