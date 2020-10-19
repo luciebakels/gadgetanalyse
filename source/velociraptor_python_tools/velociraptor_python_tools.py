@@ -30,7 +30,7 @@ Routines for reading velociraptor output
 """
     IO Routines
 """
-def ReadPropertyFile(basefilename,iseparatesubfiles=0,iverbose=1, desiredfields=[], onefile=None):
+def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=None):
     """
     VELOCIraptor/STF files in various formats
     for example ascii format contains
@@ -60,8 +60,8 @@ def ReadPropertyFile(basefilename,iseparatesubfiles=0,iverbose=1, desiredfields=
         numfiles=0
     else:
         filename=basefilename+".properties"+".0"
-        if onefile is not None:
-            filename = basefilename + ".properties.%i" %onefile
+        if selected_files is not None:
+            filename = basefilename + ".properties.%i" %selected_files[0]
         inompi=False
         if (os.path.isfile(filename)==False):
             print("file not found")
@@ -101,15 +101,22 @@ def ReadPropertyFile(basefilename,iseparatesubfiles=0,iverbose=1, desiredfields=
     halofile.close()
 
     #allocate memory that will store the halo dictionary
-    if onefile is None:
-        catalog={fieldnames[i]:np.zeros(numtothalos,dtype=fieldtype[i]) for i in range(len(fieldnames))}
-    else:
-        catalog={fieldnames[i]:np.zeros(numhalos,dtype=fieldtype[i]) for i in range(len(fieldnames))}
-        numfiles = 1
+    if selected_files is not None:
+        numtothalos = np.uint64(0)
+        numfiles = len(selected_files)
+        for ifile in selected_files:
+            filename = basefilename+".properties"+"."+str(ifile)
+            halofile = h5py.File(filename, 'r')
+            numtothalos += np.uint64(halofile["Num_of_groups"][0])
+            halofile.close()
+    
+    catalog={fieldnames[i]:np.zeros(numtothalos,dtype=fieldtype[i]) for i in range(len(fieldnames))}
+    
     noffset=np.uint64(0)
     for ifile in range(numfiles):
         if (inompi==True): filename=basefilename+".properties"
-        elif (onefile is None): filename=basefilename+".properties"+"."+str(ifile)
+        elif selected_files is not None: filename=basefilename+".properties"+"."+str(selected_files[ifile])
+        else: filename=basefilename+".properties"+"."+str(ifile)
         if (iverbose) : print("reading ",filename)
 
         #here convert the hdf information into a numpy array
@@ -122,22 +129,6 @@ def ReadPropertyFile(basefilename,iseparatesubfiles=0,iverbose=1, desiredfields=
             catvalue=fieldnames[i]
             if (numhalos>0): catalog[catvalue][noffset:noffset+numhalos]=htemp[i]
         noffset+=numhalos
-    #if subhalos are written in separate files, then read them too
-    if (iseparatesubfiles==1):
-        for ifile in range(numfiles):
-            if (inompi==True): filename=basefilename+".sublevels"+".properties"
-            else: filename=basefilename+".sublevels"+".properties"+"."+str(ifile)
-            if (iverbose) : print("reading ",filename)
-
-            halofile = h5py.File(filename, 'r')
-            numhalos=np.uint64(halofile["Num_of_groups"][0])
-            if (numhalos>0):htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]
-            halofile.close()
-            #numhalos=len(htemp[0])
-            for i in range(len(fieldnames)):
-                catvalue=fieldnames[i]
-            if (numhalos>0): catalog[catvalue][noffset:noffset+numhalos]=htemp[i]
-            noffset+=numhalos
 
     if (iverbose): print("done reading properties file ",time.clock()-start)
     return catalog,numtothalos,atime
