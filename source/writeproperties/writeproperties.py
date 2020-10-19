@@ -1096,7 +1096,7 @@ def ReadParticleTypes(basefilename,iseparatesubfiles=0,iverbose=0, unbound=True)
 
     return particledata
     
-def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=0, binarydtype=np.int64, 
+def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=1, binarydtype=np.int64, 
 	unbound=True, selected_files=None):
     """
     VELOCIraptor/STF catalog_group, catalog_particles and catalog_parttypes in various formats
