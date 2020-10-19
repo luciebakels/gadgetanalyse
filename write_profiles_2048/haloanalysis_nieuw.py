@@ -200,13 +200,19 @@ if param.runparams['VELcopy']:
 		else:
 			haloproperties[velset] = catalog[velset]
 
-	writeDataToHDF5quantities(param.paths['outputpath'], 'snapshot_%03d.quantities.hdf5' %opt.snapshot, haloproperties,
-		overwrite=False, savePartData=False, convertVel=False, copyVel=True)
+	writeDataToHDF5quantities(param.paths['outputpath'], 'snapshot_%03d.quantities.hdf5' %opt.snapshot, 
+		haloproperties,	overwrite=False, savePartData=False, convertVel=False, copyVel=True)
 
 else:
 	print("Reading VELOCIraptor catalog")
-	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
-		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list)
+	if (param.runparams['Snapshot']) and ('Nfiles' in param.runparams) and ('Nfilestart' in param.runparams):
+		catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
+			'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list,
+			selected_files=np.arange(param.runparams['Nfilestart'], 
+				param.runparams['Nfilestart']+param.runparams['Nfiles'], 1).astype(int))
+	else:
+		catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
+			'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list)
 
 	print("Opening snapshot_%03d" %(opt.snapshot+1))
 	d_snap = {}
