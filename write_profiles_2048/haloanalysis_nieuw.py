@@ -42,7 +42,7 @@ class Params:
 				elif line[0] in ['BoxSize', 'boxsize', 'Boxsize', 'boxSize']:
 					self.boxsize = float(line[1])
 
-				elif line[0] in ['SO', 'TreeData', 'Quantities', 'Profiles', 'KDTree', 'VELconvert', 'Snapshot', 'VELcopy', 'Physical']:
+				elif line[0] in ['SO', 'TreeData', 'Quantities', 'Profiles', 'KDTree', 'Snapshot', 'Physical']:
 					if line[1] in  ['0', 'No', 'NO', 'n', 'N', 'False', 'F']:
 						self.runparams[line[0]] = False
 					elif line[1] in ['1', 'Yes', 'YES', 'y', 'Y', 'True', 'T']:
@@ -145,162 +145,104 @@ if 'H' in param.d_partType['particle_type']:
 	for key in velcopy_list_gas:
 		velcopy_list.append(key)
 
-if param.runparams['VELcopy']:
-	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
-		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), ibinary=2, desiredfields=velcopy_list)
-	tree, numsnaps = ReadWalkableHDFTree(param.paths['treepath'], False)
-	haloproperties = {}
-	haloproperties['Head'] = tree[opt.snapshot]['Head'] - 1
-	haloproperties['Tail'] = tree[opt.snapshot]['Tail'] - 1
-	haloproperties['RootHead'] = tree[opt.snapshot]['RootHead'] - 1
-	haloproperties['RootTail'] = tree[opt.snapshot]['RootTail']	- 1
 
-	for velset in velcopy_list:
-		if velset in ['Yc', 'Zc', 'Ycminpot', 'Zcminpot', 'VYc', 'VZc', 'VXcminpot', 'VYcminpot', 'VZcminpot']:
-			continue
-		elif velset == 'Mass_200crit':
-			haloproperties['M200'] = catalog['Mass_200crit']
-		elif velset == 'Mass_200crit_gas':
-			haloproperties['M200gas'] = catalog['Mass_200crit_gas']
-		elif velset == 'SO_Mass_500_rhocrit':
-			haloproperties['M500'] = catalog['SO_Mass_500_rhocrit']
-		elif velset == 'SO_Mass_gas_500_rhocrit':
-			haloproperties['M500gas'] = catalog['SO_Mass_gas_500_rhocrit']
-		elif velset == 'SO_R_500_rhocrit':
-			haloproperties['R500'] = catalog['SO_R_500_rhocrit']	
-		elif velset == 'R_200crit':
-			haloproperties['R200'] = catalog['R_200crit']
-		elif velset == 'ID':
-			haloproperties['HaloID'] = catalog['ID']
-			haloproperties['HaloIndex'] = catalog['ID'] - 1
-		elif velset == 'Xcminpot':
-			haloproperties['Coord'] = np.zeros((len(catalog['Xcminpot']), 3))
-			haloproperties['Coord'][:, 0] = catalog['Xcminpot']
-			haloproperties['Coord'][:, 1] = catalog['Ycminpot']
-			haloproperties['Coord'][:, 2] = catalog['Zcminpot']
-		elif velset == 'Xc':
-			haloproperties['CoordMR'] = np.zeros((len(catalog['Xc']), 3))
-			haloproperties['CoordMR'][:, 0] = catalog['Xc']
-			haloproperties['CoordMR'][:, 1] = catalog['Yc']
-			haloproperties['CoordMR'][:, 2] = catalog['Zc']
-		elif velset == 'VXc':
-			haloproperties['Vel'] = np.zeros((len(catalog['VXc']), 3))
-			haloproperties['Vel'][:, 0] = catalog['VXc']
-			haloproperties['Vel'][:, 1] = catalog['VYc']
-			haloproperties['Vel'][:, 2] = catalog['VZc']
-			if 'VXcminpot' in velcopy_list:
-				waartemp = np.where(catalog['VXc'] == 0.0)[0]
-				haloproperties['Vel'][waartemp, 0] = catalog['VXcminpot'][waartemp]
-				haloproperties['Vel'][waartemp, 1] = catalog['VYcminpot'][waartemp]
-				haloproperties['Vel'][waartemp, 2] = catalog['VZcminpot'][waartemp]
-		elif velset == 'hostHaloID':
-			waartemp = np.where(catalog['hostHaloID'] > 0)[0]
-			haloproperties['hostHaloID'] = (np.ones(len(catalog['hostHaloID']))*-1).astype(int)
-			haloproperties['hostHaloID'][waartemp] -= 1
-		else:
-			haloproperties[velset] = catalog[velset]
+print("Reading VELOCIraptor catalog")
 
-	writeDataToHDF5quantities(param.paths['outputpath'], 'snapshot_%03d.quantities.hdf5' %opt.snapshot, 
-		haloproperties,	overwrite=False, savePartData=False, convertVel=False, copyVel=True)
+selected_files = None
 
+catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
+	'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), desiredfields=velcopy_list,
+	selected_files=selected_files, halolist=halolist)
+
+print("Opening snapshot_%03d" %(opt.snapshot+1))
+d_snap = {}
+d_snap['snapshot'] = opt.snapshot+1
+read_only_header = False
+if param.runparams['VELconvert']:
+	read_only_header = True
 else:
-	print("Reading VELOCIraptor catalog")
-	
-	selected_files = None
-
-	catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
-		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), desiredfields=velcopy_list,
-		selected_files=selected_files)
-
-	print("Opening snapshot_%03d" %(opt.snapshot+1))
-	d_snap = {}
-	d_snap['snapshot'] = opt.snapshot+1
 	read_only_header = False
-	if param.runparams['VELconvert']:
-		read_only_header = True
+	param.runparams['Snapshot'] = True
+
+if param.runparams['Snapshot']:
+	if 'Nfiles' in param.runparams:
+		nfiles = param.runparams['Nfiles']
 	else:
-		read_only_header = False
-		param.runparams['Snapshot'] = True
-
-	if param.runparams['Snapshot']:
-		if 'Nfiles' in param.runparams:
-			nfiles = param.runparams['Nfiles']
-		else:
-			nfiles = None
-		if 'Nfilestart' in param.runparams:
-			nfilestart = param.runparams['Nfilestart']
-		else:
-			nfilestart = None
-		print(nfiles)
-		#nfiles = None
-		d_snap['File'] = Snapshot(param.paths['snappath'], opt.snapshot+1, d_partType = param.d_partType, 
-			read_only_header=read_only_header, nfiles=nfiles, nfilestart=nfilestart, physical=param.runparams['Physical'],
-			snapshottype=param.runparams['SnapshotType'])
-		d_snap['redshift'] = d_snap['File'].redshift
-		print('atime:', atime, 1/(1.+d_snap['redshift']))
-		if round(atime, 3) != round(1./(1.+d_snap['redshift']), 3):
-			print('atime:', atime, 1/(1.+d_snap['redshift']))
-			sys.exit("Incorrect snapshot - VR catalogue combination")
-		boxsize = d_snap['File'].boxsize
-		print('Boxsize: ', boxsize)
-	else:
-		d_snap['redshift'] = 1./atime - 1.
-		d_snap['File'] = {}
-		if param.boxsize is None:
-			sys.exit('No boxsize present in .cfg file')
-		else:
-			boxsize = param.boxsize
-
-	partdata = None
-	if (param.runparams['VELconvert'] == False) & (param.runparams['KDTree'] == True):
-		print("Building coordinate tree...")
-		d_snap['File'].makeCoordTree()
-	if param.runparams['ParticleDataType'] == 'FOF' and len(catalog['Mass_200crit'])>0:
-		print("Reading particle data")
-		iparttypes = 0
-		if len(param.d_partType['particle_type']) >1:
-			iparttypes = 1
-		partdata = ReadParticleDataFile(param.paths['velpath'] + 
-			'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), 
-			iparttypes=iparttypes, unbound=True, selected_files=selected_files)
-	elif param.runparams['ParticleDataType'] == 'Bound' and len(catalog['Mass_200crit'])>0:
-		print("Reading particle data")
-		iparttypes = 0
-		if len(param.d_partType['particle_type']) >1:
-			iparttypes = 1
-		partdata = ReadParticleDataFile(param.paths['velpath'] + 
-			'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), 
-			iparttypes=iparttypes, unbound=False, selected_files=selected_files)
-	if param.runparams['TreeData']:
-		print("Reading walkable tree")
-		tree, numsnaps = ReadWalkableHDFTree(param.paths['treepath'], False)
-		catalog['Head'] = tree[opt.snapshot]['Head']
-		catalog['Tail'] = tree[opt.snapshot]['Tail']
-		catalog['RootHead'] = tree[opt.snapshot]['RootHead']
-		catalog['RootTail'] = tree[opt.snapshot]['RootTail']
-
-	Nhalo = int(haloes)
-	if halolist is not None:
-		Nhalo = len(halolist)
-	haloproperties = findHaloPropertiesInSnap_nieuw(catalog, d_snap, d_runparams = param.runparams, halolist=halolist,
-		partdata=partdata, d_radius=param.rad, d_partType=param.d_partType, Nhalo=Nhalo, startHalo=0, 
-		boxsize=boxsize, debug=debug)
-
-
-	print("Writing data...")
-
-	quantityname = 'snapshot_%03d.quantities.hdf5' %opt.snapshot
-	profilename = 'snapshot_%03d.profiles.hdf5' %opt.snapshot
-
+		nfiles = None
 	if 'Nfilestart' in param.runparams:
-		quantityname = 'snapshot_%03d.%i.quantities.hdf5' %(opt.snapshot, param.runparams['Nfilestart'])
-		profilename = 'snapshot_%03d.%i.profiles.hdf5' %(opt.snapshot, param.runparams['Nfilestart'])
+		nfilestart = param.runparams['Nfilestart']
+	else:
+		nfilestart = None
+	print(nfiles)
+	#nfiles = None
+	d_snap['File'] = Snapshot(param.paths['snappath'], opt.snapshot+1, d_partType = param.d_partType, 
+		read_only_header=read_only_header, nfiles=nfiles, nfilestart=nfilestart, physical=param.runparams['Physical'],
+		snapshottype=param.runparams['SnapshotType'])
+	d_snap['redshift'] = d_snap['File'].redshift
+	print('atime:', atime, 1/(1.+d_snap['redshift']))
+	if round(atime, 3) != round(1./(1.+d_snap['redshift']), 3):
+		print('atime:', atime, 1/(1.+d_snap['redshift']))
+		sys.exit("Incorrect snapshot - VR catalogue combination")
+	boxsize = d_snap['File'].boxsize
+	print('Boxsize: ', boxsize)
+else:
+	d_snap['redshift'] = 1./atime - 1.
+	d_snap['File'] = {}
+	if param.boxsize is None:
+		sys.exit('No boxsize present in .cfg file')
+	else:
+		boxsize = param.boxsize
 
-	if param.runparams['Quantities'] or param.runparams['VELconvert']:
-		writeDataToHDF5quantities(param.paths['outputpath'], quantityname, 
-			haloproperties, overwrite=False, convertVel = param.runparams['VELconvert'])
+partdata = None
+if (param.runparams['VELconvert'] == False) & (param.runparams['KDTree'] == True):
+	print("Building coordinate tree...")
+	d_snap['File'].makeCoordTree()
+if param.runparams['ParticleDataType'] == 'FOF' and len(catalog['Mass_200crit'])>0:
+	print("Reading particle data")
+	iparttypes = 0
+	if len(param.d_partType['particle_type']) >1:
+		iparttypes = 1
+	partdata = ReadParticleDataFile(param.paths['velpath'] + 
+		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), 
+		iparttypes=iparttypes, unbound=True, selected_files=selected_files)
+elif param.runparams['ParticleDataType'] == 'Bound' and len(catalog['Mass_200crit'])>0:
+	print("Reading particle data")
+	iparttypes = 0
+	if len(param.d_partType['particle_type']) >1:
+		iparttypes = 1
+	partdata = ReadParticleDataFile(param.paths['velpath'] + 
+		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), 
+		iparttypes=iparttypes, unbound=False, selected_files=selected_files)
+if param.runparams['TreeData']:
+	print("Reading walkable tree")
+	tree, numsnaps = ReadWalkableHDFTree(param.paths['treepath'], False)
+	catalog['Head'] = tree[opt.snapshot]['Head']
+	catalog['Tail'] = tree[opt.snapshot]['Tail']
+	catalog['RootHead'] = tree[opt.snapshot]['RootHead']
+	catalog['RootTail'] = tree[opt.snapshot]['RootTail']
 
-	if param.runparams['Profiles'] and (param.runparams['VELconvert']==False):
-		writeDataToHDF5profiles(param.paths['outputpath'], profilename, haloproperties, overwrite=True)
+Nhalo = int(haloes)
+if halolist is not None:
+	Nhalo = len(halolist)
+haloproperties = findHaloPropertiesInSnap_nieuw(catalog, d_snap, d_runparams = param.runparams, halolist=halolist,
+	partdata=partdata, d_radius=param.rad, d_partType=param.d_partType, Nhalo=Nhalo, startHalo=0, 
+	boxsize=boxsize, debug=debug)
+
+
+print("Writing data...")
+
+quantityname = 'snapshot_%03d.quantities.hdf5' %opt.snapshot
+profilename = 'snapshot_%03d.profiles.hdf5' %opt.snapshot
+
+if 'Nfilestart' in param.runparams:
+	quantityname = 'snapshot_%03d.%i.quantities.hdf5' %(opt.snapshot, param.runparams['Nfilestart'])
+	profilename = 'snapshot_%03d.%i.profiles.hdf5' %(opt.snapshot, param.runparams['Nfilestart'])
+
+if param.runparams['Quantities'] or param.runparams['VELconvert']:
+	writeDataToHDF5quantities(param.paths['outputpath'], quantityname, 
+		haloproperties, overwrite=False, convertVel = param.runparams['VELconvert'])
+
+if param.runparams['Profiles'] and (param.runparams['VELconvert']==False):
+	writeDataToHDF5profiles(param.paths['outputpath'], profilename, haloproperties, overwrite=True)
 
 print("Finished")
