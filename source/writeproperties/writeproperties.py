@@ -1097,7 +1097,7 @@ def ReadParticleTypes(basefilename,iseparatesubfiles=0,iverbose=0, unbound=True)
     return particledata
     
 def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=1, binarydtype=np.int64, 
-	unbound=True, selected_files=None):
+	unbound=True, selected_files=None, halolist=None):
     """
     VELOCIraptor/STF catalog_group, catalog_particles and catalog_parttypes in various formats
 
@@ -1126,6 +1126,10 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
             return []
     byteoffset=0
 
+    #If a list of haloes is given, we only want to read in the haloes (memory efficient)
+    if halolist is not None:
+        haloindices = (halolist%TEMPORALHALOIDVAL - 1).astype(int)
+
     #load header information from file to get total number of groups
     gfile = h5py.File(gfilename, 'r')
     numfiles=int(gfile["Num_of_files"][0])
@@ -1141,6 +1145,9 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
             numtothalos += np.uint64(halofile["Num_of_groups"][0])
             halofile.close()
 
+    if halolist is not None:
+        numtothalos = len(haloindices)        
+
     particledata=dict()
     particledata['Npart']=np.zeros(numtothalos,dtype=np.uint64)
     particledata['Npart_unbound']=np.zeros(numtothalos,dtype=np.uint64)
@@ -1150,6 +1157,8 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
 
     #now for all files
     counter=np.uint64(0)
+    if halolist is not None:
+        noffset = np.uint64(0)
     subfilenames=[""]
     if (iseparatesubfiles==1): subfilenames=["",".sublevels"]
     for ifile in range(numfiles):
@@ -1174,14 +1183,20 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
 
             gfile = h5py.File(gfilename, 'r')
             numhalos=np.uint64(gfile["Num_of_groups"][0])
-            numingroup=np.uint64(gfile["Group_Size"])
-            offset=np.uint64(gfile["Offset"])
-            uoffset=np.uint64(gfile["Offset_unbound"])
+            if halolist is not None:
+            	ww = haloindices[np.where((haloindices >= offset)&(haloindices < offset+numhalos))[0]] - offset
+            	noffset += numhalos
+            	numhalos = len(ww)
+            else:
+            	ww = np.arange(0, numhalos, 1).astype(int)
+            numingroup=np.uint64(gfile["Group_Size"][ww])
+            offset=np.uint64(gfile["Offset"][ww])
+            uoffset=np.uint64(gfile["Offset_unbound"][ww])
             gfile.close()
             pfile = h5py.File(pfilename, 'r')
             upfile = h5py.File(upfilename, 'r')
-            piddata=np.int64(pfile["Particle_IDs"])
-            upiddata=np.int64(upfile["Particle_IDs"])
+            piddata=np.int64(pfile["Particle_IDs"][ww])
+            upiddata=np.int64(upfile["Particle_IDs"][ww])
             npart=len(piddata)
             unpart=len(upiddata)
 
@@ -1190,8 +1205,8 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
             if (iparttypes==1):
                 tfile = h5py.File(tfilename, 'r')
                 utfile = h5py.File(utfilename, 'r')
-                tdata=np.uint16(tfile["Particle_types"])
-                utdata=np.uint16(utfile["Particle_types"])
+                tdata=np.uint16(tfile["Particle_types"][ww])
+                utdata=np.uint16(utfile["Particle_types"][ww])
                 tfile.close()
                 utfile.close()
 

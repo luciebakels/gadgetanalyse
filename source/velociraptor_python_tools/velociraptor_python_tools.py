@@ -30,7 +30,7 @@ Routines for reading velociraptor output
 """
     IO Routines
 """
-def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=None):
+def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=None, halolist=None):
     """
     VELOCIraptor/STF files in various formats
     for example ascii format contains
@@ -72,6 +72,10 @@ def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=N
     fieldtype=[]
     fieldindex=[]
 
+    #If a list of haloes is given, we only want to read in the haloes (memory efficient)
+    if halolist is not None:
+        haloindices = (halolist%TEMPORALHALOIDVAL - 1).astype(int)
+
     #load hdf file
     halofile = h5py.File(filename, 'r')
     filenum=int(halofile["File_id"][0])
@@ -109,10 +113,15 @@ def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=N
             halofile = h5py.File(filename, 'r')
             numtothalos += np.uint64(halofile["Num_of_groups"][0])
             halofile.close()
+
+    if halolist is not None:
+        numtothalos = len(haloindices)
     
     catalog={fieldnames[i]:np.zeros(numtothalos,dtype=fieldtype[i]) for i in range(len(fieldnames))}
     
     noffset=np.uint64(0)
+    if halolist is not None:
+        noffset_hl = np.uint64(0)
     for ifile in range(numfiles):
         if (inompi==True): filename=basefilename+".properties"
         elif selected_files is not None: filename=basefilename+".properties"+"."+str(selected_files[ifile])
@@ -122,13 +131,23 @@ def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=N
         #here convert the hdf information into a numpy array
         halofile = h5py.File(filename, 'r')
         numhalos=np.uint64(halofile["Num_of_groups"][0])
-        if (numhalos>0):htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]
+        if numhaloes > 0:
+            if halolist is not None:
+                ww = np.where((halolist >= noffset)&(halolist < noffset+numhalos))[0] - noffset
+                htemp = [np.array(halofile[catvalue][ww]) for catvalue in fieldnames]
+            else:
+                htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]
         halofile.close()
         #numhalos=len(htemp[0])
         for i in range(len(fieldnames)):
             catvalue=fieldnames[i]
-            if (numhalos>0): catalog[catvalue][noffset:noffset+numhalos]=htemp[i]
+            if (numhalos>0): 
+                if halolist is not None:
+                    catalog[catvalue][noffset_hl:noffset_hl+len(ww)] = htemp[i]
+                else:
+                    catalog[catvalue][noffset:noffset+numhalos]=htemp[i]
         noffset+=numhalos
+        noffset_hl += len(ww)
 
     if (iverbose): print("done reading properties file ",time.clock()-start)
     return catalog,numtothalos,atime
