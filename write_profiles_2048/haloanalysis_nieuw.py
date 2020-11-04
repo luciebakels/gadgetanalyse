@@ -146,13 +146,6 @@ if 'H' in param.d_partType['particle_type']:
 		velcopy_list.append(key)
 
 
-print("Reading VELOCIraptor catalog")
-
-selected_files = None
-
-catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
-	'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), desiredfields=velcopy_list,
-	selected_files=selected_files, halolist=halolist)
 
 print("Opening snapshot_%03d" %(opt.snapshot+1))
 d_snap = {}
@@ -193,6 +186,14 @@ partdata = None
 if param.runparams['KDTree'] == True:
 	print("Building coordinate tree...")
 	d_snap['File'].makeCoordTree()
+
+
+print("Reading VELOCIraptor catalog")
+selected_files = None
+catalog, haloes, atime = vpt.ReadPropertyFile(param.paths['velpath'] + 
+	'/snapshot_%03d/snapshot_%03d' %(opt.snapshot,opt.snapshot), desiredfields=velcopy_list,
+	selected_files=selected_files, halolist=halolist)
+
 if param.runparams['ParticleDataType'] == 'FOF' and len(catalog['Mass_200crit'])>0:
 	print("Reading particle data")
 	iparttypes = 0
@@ -220,7 +221,7 @@ if param.runparams['TreeData']:
 Nhalo = int(haloes)
 if halolist is not None:
 	Nhalo = len(halolist)
-haloproperties = findHaloPropertiesInSnap_nieuw(catalog, d_snap, d_runparams = param.runparams, halolist=halolist,
+haloproperties = findHaloPropertiesInSnap_nieuw(catalog, d_snap, d_runparams = param.runparams, halolist=None,
 	partdata=partdata, d_radius=param.rad, d_partType=param.d_partType, Nhalo=Nhalo, startHalo=0, 
 	boxsize=boxsize, debug=debug)
 

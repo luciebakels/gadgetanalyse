@@ -1183,15 +1183,16 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
 
             gfile = h5py.File(gfilename, 'r')
             numhalos=np.uint64(gfile["Num_of_groups"][0])
-            # if halolist is not None:
-            # 	ww = haloindices[np.where((haloindices >= noffset)&(haloindices < noffset+numhalos))[0]] - noffset
-            # 	noffset += numhalos
-            # 	numhalos = len(ww)
-            # else:
-            ww = np.arange(0, numhalos, 1).astype(int)
-            numingroup=np.uint64(gfile["Group_Size"])[ww]
-            offset=np.uint64(gfile["Offset"])[ww]
-            uoffset=np.uint64(gfile["Offset_unbound"])[ww]
+            if halolist is not None:
+            	ww = haloindices[np.where((haloindices >= noffset)&(haloindices < noffset+numhalos))[0]] - noffset
+            	noffset += numhalos
+            	numhalos_hl = len(ww)
+            else:
+            	ww = np.arange(0, numhalos, 1).astype(int)
+            	numhalos_hl = numhalos
+            numingroup=np.uint64(gfile["Group_Size"])
+            offset=np.uint64(gfile["Offset"])
+            uoffset=np.uint64(gfile["Offset_unbound"])
             gfile.close()
             pfile = h5py.File(pfilename, 'r')
             upfile = h5py.File(upfilename, 'r')
@@ -1218,28 +1219,30 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
             unumingroup[-1]=(unpart-uoffset[-1])
 
             if unbound:
-                particledata['Npart'][int(counter):int(counter+numhalos)]=numingroup
+                particledata['Npart'][int(counter):int(counter+numhalos_hl)]=numingroup[ww]
             else:
-                particledata['Npart'][int(counter):int(counter+numhalos)] = numingroup-unumingroup
+                particledata['Npart'][int(counter):int(counter+numhalos_hl)] = numingroup[ww]-unumingroup[ww]
 
-            particledata['Npart_unbound'][int(counter):int(counter+numhalos)]=unumingroup
-            for i in range(numhalos):
+            particledata['Npart_unbound'][int(counter):int(counter+numhalos_hl)]=unumingroup[ww]
+            j = -1
+            for i in ww:
+            	j += 1
                 if unbound:
-                    particledata['Particle_IDs'][int(i+counter)]=np.zeros(numingroup[i],dtype=np.int64)
-                    particledata['Particle_IDs'][int(i+counter)][:int(numingroup[i]-unumingroup[i])]=piddata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
-                    particledata['Particle_IDs'][int(i+counter)][int(numingroup[i]-unumingroup[i]):numingroup[i]]=upiddata[uoffset[i]:uoffset[i]+unumingroup[i]]
+                    particledata['Particle_IDs'][int(j+counter)]=np.zeros(numingroup[i],dtype=np.int64)
+                    particledata['Particle_IDs'][int(j+counter)][:int(numingroup[i]-unumingroup[i])]=piddata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
+                    particledata['Particle_IDs'][int(j+counter)][int(numingroup[i]-unumingroup[i]):numingroup[i]]=upiddata[uoffset[i]:uoffset[i]+unumingroup[i]]
                     if (iparttypes==1):
-                        particledata['Particle_Types'][int(i+counter)]=np.zeros(numingroup[i],dtype=np.int64)
-                        particledata['Particle_Types'][int(i+counter)][:int(numingroup[i]-unumingroup[i])]=tdata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
-                        particledata['Particle_Types'][int(i+counter)][int(numingroup[i]-unumingroup[i]):numingroup[i]]=utdata[uoffset[i]:uoffset[i]+unumingroup[i]]
+                        particledata['Particle_Types'][int(j+counter)]=np.zeros(numingroup[i],dtype=np.int64)
+                        particledata['Particle_Types'][int(j+counter)][:int(numingroup[i]-unumingroup[i])]=tdata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
+                        particledata['Particle_Types'][int(j+counter)][int(numingroup[i]-unumingroup[i]):numingroup[i]]=utdata[uoffset[i]:uoffset[i]+unumingroup[i]]
                 else:
-                    particledata['Particle_IDs'][int(i+counter)]=np.zeros(numingroup[i]-unumingroup[i],dtype=np.int64)
-                    particledata['Particle_IDs'][int(i+counter)][:int(numingroup[i]-unumingroup[i])]=piddata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
+                    particledata['Particle_IDs'][int(j+counter)]=np.zeros(numingroup[i]-unumingroup[i],dtype=np.int64)
+                    particledata['Particle_IDs'][int(j+counter)][:int(numingroup[i]-unumingroup[i])]=piddata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
                     if (iparttypes==1):
-                        particledata['Particle_Types'][int(i+counter)]=np.zeros(numingroup[i]-unumingroup[i],dtype=np.int64)
-                        particledata['Particle_Types'][int(i+counter)][:int(numingroup[i]-unumingroup[i])]=tdata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
+                        particledata['Particle_Types'][int(j+counter)]=np.zeros(numingroup[i]-unumingroup[i],dtype=np.int64)
+                        particledata['Particle_Types'][int(j+counter)][:int(numingroup[i]-unumingroup[i])]=tdata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
 
-            counter+=numhalos
+            counter+=numhalos_hl
 
     return particledata
 
