@@ -1189,14 +1189,14 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
             	numhalos = len(ww)
             else:
             	ww = np.arange(0, numhalos, 1).astype(int)
-            numingroup=np.uint64(gfile["Group_Size"][ww])
-            offset=np.uint64(gfile["Offset"][ww])
-            uoffset=np.uint64(gfile["Offset_unbound"][ww])
+            numingroup=np.uint64(gfile["Group_Size"])[ww]
+            offset=np.uint64(gfile["Offset"])[ww]
+            uoffset=np.uint64(gfile["Offset_unbound"])[ww]
             gfile.close()
             pfile = h5py.File(pfilename, 'r')
             upfile = h5py.File(upfilename, 'r')
-            piddata=np.int64(pfile["Particle_IDs"][ww])
-            upiddata=np.int64(upfile["Particle_IDs"][ww])
+            piddata=np.int64(pfile["Particle_IDs"])[ww]
+            upiddata=np.int64(upfile["Particle_IDs"])[ww]
             npart=len(piddata)
             unpart=len(upiddata)
 
@@ -1205,8 +1205,8 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
             if (iparttypes==1):
                 tfile = h5py.File(tfilename, 'r')
                 utfile = h5py.File(utfilename, 'r')
-                tdata=np.uint16(tfile["Particle_types"][ww])
-                utdata=np.uint16(utfile["Particle_types"][ww])
+                tdata=np.uint16(tfile["Particle_types"])[ww]
+                utdata=np.uint16(utfile["Particle_types"])[ww]
                 tfile.close()
                 utfile.close()
 
