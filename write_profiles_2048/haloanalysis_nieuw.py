@@ -158,11 +158,7 @@ print("Opening snapshot_%03d" %(opt.snapshot+1))
 d_snap = {}
 d_snap['snapshot'] = opt.snapshot+1
 read_only_header = False
-if param.runparams['VELconvert']:
-	read_only_header = True
-else:
-	read_only_header = False
-	param.runparams['Snapshot'] = True
+param.runparams['Snapshot'] = True
 
 if param.runparams['Snapshot']:
 	if 'Nfiles' in param.runparams:
@@ -194,7 +190,7 @@ else:
 		boxsize = param.boxsize
 
 partdata = None
-if (param.runparams['VELconvert'] == False) & (param.runparams['KDTree'] == True):
+if param.runparams['KDTree'] == True:
 	print("Building coordinate tree...")
 	d_snap['File'].makeCoordTree()
 if param.runparams['ParticleDataType'] == 'FOF' and len(catalog['Mass_200crit'])>0:
@@ -203,7 +199,7 @@ if param.runparams['ParticleDataType'] == 'FOF' and len(catalog['Mass_200crit'])
 	if len(param.d_partType['particle_type']) >1:
 		iparttypes = 1
 	partdata = ReadParticleDataFile(param.paths['velpath'] + 
-		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), 
+		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), halolist=halolist,
 		iparttypes=iparttypes, unbound=True, selected_files=selected_files)
 elif param.runparams['ParticleDataType'] == 'Bound' and len(catalog['Mass_200crit'])>0:
 	print("Reading particle data")
@@ -211,7 +207,7 @@ elif param.runparams['ParticleDataType'] == 'Bound' and len(catalog['Mass_200cri
 	if len(param.d_partType['particle_type']) >1:
 		iparttypes = 1
 	partdata = ReadParticleDataFile(param.paths['velpath'] + 
-		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), 
+		'/snapshot_%03d/snapshot_%03d' %(opt.snapshot, opt.snapshot), halolist=halolist,
 		iparttypes=iparttypes, unbound=False, selected_files=selected_files)
 if param.runparams['TreeData']:
 	print("Reading walkable tree")
@@ -238,11 +234,11 @@ if 'Nfilestart' in param.runparams:
 	quantityname = 'snapshot_%03d.%i.quantities.hdf5' %(opt.snapshot, param.runparams['Nfilestart'])
 	profilename = 'snapshot_%03d.%i.profiles.hdf5' %(opt.snapshot, param.runparams['Nfilestart'])
 
-if param.runparams['Quantities'] or param.runparams['VELconvert']:
+if param.runparams['Quantities']:
 	writeDataToHDF5quantities(param.paths['outputpath'], quantityname, 
-		haloproperties, overwrite=False, convertVel = param.runparams['VELconvert'])
+		haloproperties, overwrite=False, convertVel = False)
 
-if param.runparams['Profiles'] and (param.runparams['VELconvert']==False):
+if param.runparams['Profiles']:
 	writeDataToHDF5profiles(param.paths['outputpath'], profilename, haloproperties, overwrite=True)
 
 print("Finished")
