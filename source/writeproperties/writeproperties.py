@@ -1183,12 +1183,12 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
 
             gfile = h5py.File(gfilename, 'r')
             numhalos=np.uint64(gfile["Num_of_groups"][0])
-            if halolist is not None:
-            	ww = haloindices[np.where((haloindices >= noffset)&(haloindices < noffset+numhalos))[0]] - noffset
-            	noffset += numhalos
-            	numhalos = len(ww)
-            else:
-            	ww = np.arange(0, numhalos, 1).astype(int)
+            # if halolist is not None:
+            # 	ww = haloindices[np.where((haloindices >= noffset)&(haloindices < noffset+numhalos))[0]] - noffset
+            # 	noffset += numhalos
+            # 	numhalos = len(ww)
+            # else:
+            ww = np.arange(0, numhalos, 1).astype(int)
             numingroup=np.uint64(gfile["Group_Size"])[ww]
             offset=np.uint64(gfile["Offset"])[ww]
             uoffset=np.uint64(gfile["Offset_unbound"])[ww]
