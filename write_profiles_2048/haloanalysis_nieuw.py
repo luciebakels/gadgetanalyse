@@ -42,7 +42,7 @@ class Params:
 				elif line[0] in ['BoxSize', 'boxsize', 'Boxsize', 'boxSize']:
 					self.boxsize = float(line[1])
 
-				elif line[0] in ['SO', 'TreeData', 'Quantities', 'Profiles', 'KDTree', 'Snapshot', 'Physical']:
+				elif line[0] in ['SO', 'TreeData', 'Quantities', 'Profiles', 'KDTree', 'Snapshot', 'Physical', 'VELconvert', 'VELcopy']:
 					if line[1] in  ['0', 'No', 'NO', 'n', 'N', 'False', 'F']:
 						self.runparams[line[0]] = False
 					elif line[1] in ['1', 'Yes', 'YES', 'y', 'Y', 'True', 'T']:
