@@ -1226,7 +1226,7 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
             particledata['Npart_unbound'][int(counter):int(counter+numhalos_hl)]=unumingroup[ww]
             j = -1
             for i in ww:
-            	j += 1
+                j += 1
                 if unbound:
                     particledata['Particle_IDs'][int(j+counter)]=np.zeros(numingroup[i],dtype=np.int64)
                     particledata['Particle_IDs'][int(j+counter)][:int(numingroup[i]-unumingroup[i])]=piddata[offset[i]:offset[i]+numingroup[i]-unumingroup[i]]
