@@ -30,7 +30,8 @@ Routines for reading velociraptor output
 """
     IO Routines
 """
-def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=None, halolist=None):
+def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=None, halolist=None,
+    TEMPORALHALOIDVAL = 1000000000000):
     """
     VELOCIraptor/STF files in various formats
     for example ascii format contains
@@ -131,9 +132,9 @@ def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=N
         #here convert the hdf information into a numpy array
         halofile = h5py.File(filename, 'r')
         numhalos=np.uint64(halofile["Num_of_groups"][0])
-        if numhaloes > 0:
+        if numhalos > 0:
             if halolist is not None:
-                ww = np.where((halolist >= noffset)&(halolist < noffset+numhalos))[0] - noffset
+                ww = haloindices[np.where((haloindices >= noffset)&(haloindices < noffset+numhalos))[0]] - noffset
                 htemp = [np.array(halofile[catvalue][ww]) for catvalue in fieldnames]
             else:
                 htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]
