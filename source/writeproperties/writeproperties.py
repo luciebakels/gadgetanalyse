@@ -1218,11 +1218,11 @@ def ReadParticleDataFile(basefilename,iseparatesubfiles=0,iparttypes=0,iverbose=
             unumingroup[-1]=(unpart-uoffset[-1])
 
             if unbound:
-                particledata['Npart'][counter:counter+numhalos]=numingroup
+                particledata['Npart'][int(counter):int(counter+numhalos)]=numingroup
             else:
-                particledata['Npart'][counter:counter+numhalos] = numingroup-unumingroup
+                particledata['Npart'][int(counter):int(counter+numhalos)] = numingroup-unumingroup
 
-            particledata['Npart_unbound'][counter:counter+numhalos]=unumingroup
+            particledata['Npart_unbound'][int(counter):int(counter+numhalos)]=unumingroup
             for i in range(numhalos):
                 if unbound:
                     particledata['Particle_IDs'][int(i+counter)]=np.zeros(numingroup[i],dtype=np.int64)
