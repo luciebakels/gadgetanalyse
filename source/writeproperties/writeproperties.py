@@ -299,19 +299,19 @@ def findHaloPropertiesInSnap_nieuw(catalog, d_snap, Nhalo=100, halolist=None,
 			break
 
 		halopropertiestemp = {}
-		coords = getHaloCoord(catalog, halo, z=d_snap['redshift'], snapshottype=d_runparams['SnapshotType'], 
+		coords = getHaloCoord(catalog, halo_i, z=d_snap['redshift'], snapshottype=d_runparams['SnapshotType'], 
 			physical=d_runparams['Physical'])
 
 		coords = coords%boxsize
-		radhier = getHaloRadius(catalog, halo, z=d_snap['redshift'], 
+		radhier = getHaloRadius(catalog, halo_i, z=d_snap['redshift'], 
 			rtype = d_radius['Rchoice'], snapshottype=d_runparams['SnapshotType'], 
 			physical=d_runparams['Physical'])
 		satellite = False
 
 		#Trusting VELOCIraptor not to falsely identify haloes as satellites
-		if (halolist is None) and (catalog['hostHaloID'][halo] != -1):
+		if (halolist is None) and (catalog['hostHaloID'][halo_i] != -1):
 			satellite = True
-			hostHaloIDtemp = np.where(catalog['hostHaloID'][halo]==catalog['ID'])[0]
+			hostHaloIDtemp = np.where(catalog['hostHaloID'][halo_i]==catalog['ID'])[0]
 			if len(hostHaloIDtemp) == 0:
 				hostHaloIDtemp = -2
 			else:
@@ -322,28 +322,28 @@ def findHaloPropertiesInSnap_nieuw(catalog, d_snap, Nhalo=100, halolist=None,
 		#All happens here
 		if debug:
 			start_time = time.time()
-			print('M200: ', catalog['Mass_200crit'][halo])
-			print('R200: ', catalog['R_200crit'][halo])
-			print('ID: ', catalog['ID'][halo])
+			print('M200: ', catalog['Mass_200crit'][halo_i])
+			print('R200: ', catalog['R_200crit'][halo_i])
+			print('ID: ', catalog['ID'][halo_i])
 		if d_runparams['VELconvert']:
 			if d_runparams['ParticleDataType'] != 'None':
-				halopropertiestemp = copyVELOCIraptor(catalog, halo, coords, redshift = d_snap['redshift'],
+				halopropertiestemp = copyVELOCIraptor(catalog, halo_i, coords, redshift = d_snap['redshift'],
 					partType=partType, particledata=partdata['Particle_Types'], d_partType=d_partType)
 			else:
-				halopropertiestemp = copyVELOCIraptor(catalog, halo, coords, redshift = d_snap['redshift'],
+				halopropertiestemp = copyVELOCIraptor(catalog, halo_i, coords, redshift = d_snap['redshift'],
 					partType=partType)
 			halopropertiestemp['hostHaloIndex'] = hostHaloIDtemp
 		elif d_runparams['ParticleDataType'] == 'None':
 			#print("Halo", halo)
-			halopropertiestemp = findHaloProperties(d_snap, halo, coords, d_radius, 
+			halopropertiestemp = findHaloProperties(d_snap, halo_i, coords, d_radius, 
 				partType=partType, satellite=satellite, rad = radhier, partlim=0, use_existing_r200=use_existing_r200,
 				profiles=d_runparams['Profiles'], quantities=d_runparams['Quantities'], debug=debug)
 		else:
 			#print("Halo", halo,len(partdata['Particle_IDs'][sortorder[halo]]))
-			halopropertiestemp = findHaloProperties(d_snap, halo, coords, d_radius, 
+			halopropertiestemp = findHaloProperties(d_snap, halo_i, coords, d_radius, 
 				partType=partType, satellite=satellite, rad = radhier, partlim=0, use_existing_r200=use_existing_r200,
 				profiles=d_runparams['Profiles'], quantities=d_runparams['Quantities'], debug=debug, 
-				particledata=partdata['Particle_IDs'][halo])
+				particledata=partdata['Particle_IDs'][halo_i])
 		if halopropertiestemp is None:
 			if debug:
 				print("De halo is leeg???")
@@ -352,27 +352,27 @@ def findHaloPropertiesInSnap_nieuw(catalog, d_snap, Nhalo=100, halolist=None,
 			print("--- %s seconds ---" % (time.time() - start_time), 'halopropertiestemp computed')
 			start_time = time.time()
 		if d_runparams['TreeData']:
-			halopropertiestemp['Tail'] = catalog['Tail'][halo]-1
-			halopropertiestemp['Head'] = catalog['Head'][halo]-1
-			halopropertiestemp['RootTail'] = catalog['RootTail'][halo]-1
-			halopropertiestemp['RootHead'] = catalog['RootHead'][halo]-1
+			halopropertiestemp['Tail'] = catalog['Tail'][halo_i]-1
+			halopropertiestemp['Head'] = catalog['Head'][halo_i]-1
+			halopropertiestemp['RootTail'] = catalog['RootTail'][halo_i]-1
+			halopropertiestemp['RootHead'] = catalog['RootHead'][halo_i]-1
 		if d_runparams['VELconvert'] == False:
 			if halopropertiestemp is None:
 				halopropertiestemp = buildHaloDictionary(partType=partType)
-				halopropertiestemp['HaloID'] = catalog['ID'][halo]
+				halopropertiestemp['HaloID'] = catalog['ID'][halo_i]
 				halopropertiestemp['HaloIndex'] = -1
 				halopropertiestemp['COM_offset'] = -1
 				halopropertiestemp['CrossTime'] = -1
 				halopropertiestemp['Coord'] = coords
 			else:
 				if satellite:
-					halopropertiestemp['Npart'] = catalog['npart'][halo]
+					halopropertiestemp['Npart'] = catalog['npart'][halo_i]
 				
-				halopropertiestemp['n_part'] = catalog['npart'][halo]
-				halopropertiestemp['HaloID'] = catalog['ID'][halo]
+				halopropertiestemp['n_part'] = catalog['npart'][halo_i]
+				halopropertiestemp['HaloID'] = catalog['ID'][halo_i]
 				halopropertiestemp['hostHaloIndex'] = hostHaloIDtemp
 				if not satellite:
-					afstandtemp = coords - getHaloCoordCOM(catalog, halo, z=d_snap['redshift'], snapshottype=d_runparams['SnapshotType'], physical=d_runparams['Physical'])
+					afstandtemp = coords - getHaloCoordCOM(catalog, halo_i, z=d_snap['redshift'], snapshottype=d_runparams['SnapshotType'], physical=d_runparams['Physical'])
 					rhier = np.where(np.abs(afstandtemp)>0.5*boxsize, np.abs(afstandtemp) - boxsize, afstandtemp)
 					halopropertiestemp['COM_offset'] = np.sqrt(np.sum(rhier**2))/halopropertiestemp['R200']
 					halopropertiestemp['CrossTime'] = (2.*halopropertiestemp['R200']*Mpc_to_km /
@@ -404,7 +404,7 @@ def findHaloPropertiesInSnap_nieuw(catalog, d_snap, Nhalo=100, halolist=None,
 			elif key=='Partindices':
 				haloproperties[key][halopropertiestemp['HaloIndex']] = halopropertiestemp[key][:]
 			else:
-				haloproperties[key][halo_i] = halopropertiestemp[key]
+				haloproperties[key][halo] = halopropertiestemp[key]
 		if debug:
 			print("--- %s seconds ---" % (time.time() - start_time), 'haloproperties updated')
 	if 'profile' in d_radius.keys():
