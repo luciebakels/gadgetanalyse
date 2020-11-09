@@ -7,63 +7,13 @@ from constants import *
 from scipy.spatial import cKDTree
 import time
 import copy
-#from basis_expansions import NaturalCubicSpline
-
-
-# from sklearn.base import BaseEstimator, TransformerMixin
-# from sklearn.linear_model import LinearRegression
-# from sklearn.pipeline import Pipeline
-
-
-# def get_natural_cubic_spline_model(x, y, minval=None, maxval=None, n_knots=None, knots=None):
-#     """
-#     Get a natural cubic spline model for the data.
-
-#     For the knots, give (a) `knots` (as an array) or (b) minval, maxval and n_knots.
-
-#     If the knots are not directly specified, the resulting knots are equally
-#     space within the *interior* of (max, min).  That is, the endpoints are
-#     *not* included as knots.
-
-#     Parameters
-#     ----------
-#     x: np.array of float
-#         The input data
-#     y: np.array of float
-#         The outpur data
-#     minval: float 
-#         Minimum of interval containing the knots.
-#     maxval: float 
-#         Maximum of the interval containing the knots.
-#     n_knots: positive integer 
-#         The number of knots to create.
-#     knots: array or list of floats 
-#         The knots.
-
-#     Returns
-#     --------
-#     model: a model object
-#         The returned model will have following method:
-#         - predict(x):
-#             x is a numpy array. This will return the predicted y-values.
-#     """
-
-#     if knots:
-#         spline = NaturalCubicSpline(knots=knots)
-#     else:
-#         spline = NaturalCubicSpline(max=maxval, min=minval, n_knots=n_knots)
-
-#     p = Pipeline([
-#         ('nat_cubic', spline),
-#         ('regression', LinearRegression(fit_intercept=True))
-#     ])
-
-#     p.fit(x, y)
-
-#     return p
 
 
 class Unbuffered(object):
+	"""
+	Copied from stackoverflow.
+	This forces HPC facilities to print when print is called.
+	"""
    def __init__(self, stream):
        self.stream = stream
    def write(self, data):
@@ -77,81 +27,182 @@ class Unbuffered(object):
 
 sys.stdout = Unbuffered(sys.stdout)
 
+
 class Snapshots:
-	def __init__(self, path, snaplist, partType=1, useIDs=True, conversions=[1, 1, 1, 1], softeningLength = 0.002, 
-		bigFile=False, physical_units=False):
+	"""
+	Class made of snapshots
+	"""
+	def __init__(self, path, snaplist, partType=1, d_partType = None, useIDs=True, conversions=[1, 1, 1, 1], nfiles=None, nfilestart=0, debug=False,
+		softeningLength = 0.002, bigFile=False, read_only_coords=False, read_only_header=False, readIDs=True, physical=False):
 		self.snapshot = {}
 		for i in snaplist:
-			self.snapshot[i] = Snapshot(path, i, partType=partType, useIDs=useIDs, conversions=conversions, 
-				softeningLength=softeningLength, bigFile=bigFile, 
-				physical_units=physical_units)
+			self.snapshot[i] = Snapshot(path, i, partType=partType, d_partType = d_partType, useIDs=useIDs, 
+				conversions=conversions, nfiles=nfiles, nfilestart=nfilestart, debug=debug,
+				softeningLength = softeningLength, bigFile=bigfile, read_only_coords=read_only_coords, 
+				read_only_header=read_only_header, readIDs=readIDs, physical=physical)
 
 
-# import numpy as np
-# import sys
-# import os
-# import h5py
+class Snapshot:
+	"""
+	Class used to read in and analyse GADGET or SWIFT snapshots.
 
-# class Snapshot:	
-# 	def __init__(self, path, nsnap, partTypes = [0, 1, 2, 3, 4, 5], useIDs=True,
-# 		physical_units=False, readData=['Velocities', 'ParticleIDs', 'Masses', 'InternalEnergy', 'Density', 'StarFormationRate',
-# 		'StellarFormationTime', 'Coordinates']):
-# 		self.physical_units = physical_units
+	This class can be used to read in complete snapshots, or just headers, IDS, coordinates, or velocities.
+	Other functionality can be used for computing properties of given regions/haloes, if either 
+	coordinates, radius, or a selection of particle IDs are given. Properties that can be computed are:
+	Centre of mass, M200, R200, central velocity, spin parameter, virial ratio, Vmax, Rmax,
+	density profile, mass profile, radial velocity profile, and the angular momemtum profile.
 
-# 		self.snappath = path
-# 		self.nsnap = nsnap
-# 		self.useIDs = useIDs
-# 		self.dataopen = self.open_snap(self.snappath, nsnap)
+	Attributes
+	----------
 
-# 		#Reading in the header information
-# 		Header = self.dataopen['Header']
-# 		self.h = Header.attrs['HubbleParam']
-# 		self.time = Header.attrs['Time']
-# 		self.boxsize = Header.attrs['BoxSize']
-# 		self.npart = Header.attrs['NumPart_ThisFile'][:]
-# 		self.redshift = Header.attrs['Redshift']
-# 		self.mass = Header.attrs['MassTable'][:]
+	-- unit conversion --
+	lengte_to_Mpc : float
+		conversion factor of snapshot length to Mpc
+	snelheid_to_kms : float
+		conversion factor of snapshot speed to kms
+	dichtheid_to_Mpc3 : float
+		conversion factor of snapshot density to 10*10Msun/Mpc3
+	massa_to_10msun : float
+		conversion factor of snapshot mass to 10*10Msun
+
+	-- snapshot properties --
+	snapshottype : str
+		the type of simulation ('gadget', 'swift')
+	softeningLength : float
+		softening length of the simulation
+	bigFile : bool
+		a flag that can be set if the snapshot is too large to load on your computer (very slow)
+	snappath : str
+		the location of the directory of the snapshot	
+	nsnap : int
+		the number of the snapshot
+	nfiles : int
+		the number of snapshot files that are read in
+	nfilestart : int
+		the starting snapshot file that is read in
+	partType : int, obsolete
+		a number that sets the particle types to be read in from the snapshot
+		replaced by d_partType
+	namePrefix : str array
+		array with the names of particles (DM, H, S)
+	readParticles : int array
+		accompanying array with namePrefix, specifying the ParticleType number used in the snapshot
+	partOffset : int array
+		accompanying array with namePrefix, specifying the number of particles of each type
+
+	-- snapshot header --
+	npart : int array
+		the number of particles of each type
+	time : float
+		atime of the snapshot
+	redshift : float
+		redshift of the snapshot
+	boxsize : float
+		length of the sides of the simulated box
+	mass : float array
+		masses of each particle type
+
+	-- snapshot data --
+	coordinates : float array
+		coordinates of each particle type
+	velocities : float array
+		velocities of each particle type
+	IDs : float array
+		IDs of each particle type
+	internalEnergy : float array
+		internalEnergy of gas particles
+	density : float array
+		density of gas particles
+	temperature : float array
+		temperature of gas particles
+	starFormationRate : float array
+		starFormationRate of star particles
+	stellarFormationTime : float array
+		stellarFormationTime of star particles		
+
+	-- misc -- 
+	physical : bool
+		a flag that specifies if the outputs are converted to physical units
+	factorh : float
+		constant to convert units with a factor h or 1
+	factorz : float
+		constant to convert units to physical (or not)
+	useIDs : bool
+		a flag specifying if particle IDs are used to compute properties with
+	debug : bool
+		a flag to print out computing times of different routines
+	tree : cKDTree
+		KDTree of the positions of all particles that are read in
+	temphalo : dict
+		dictionary containing properties of a specified halo/regions
+	dataopen : dict
+		dictionary of the snapshot file(s)
+
+
+	Functions
+	---------
+
+	-- reading and getting datasets --
+	open_property(prop)
+		Opening and reading given dataset 'prop'
+	get_IDs()
+		Returns the IDs dataset
+	get_coordinates()
+		Returns the coordinates dataset
+	get_velocities()
+		Returns the velocities dataset
+	get_internalEnergy()
+		Returns the internal energy dataset
+	get_temperature()
+		Returns the temperature dataset
+	get_density()
+		Returns the density dataset
+	get_masses()
+		Returns the masses dataset
+	get_time()
+		Returns the a-time
+	get_boxsize()
+		Returns the boxsize
+
+	-- bulk property computations --
+	makeCoordTree()
+		Computes cKDTree of all particle positions and stores it in self.tree
+	get_number_of_particles()
+		Returns the total number of particles
+	get_radius(point=np.array([0, 0, 0]), coords = np.zeros((0, 3)))
+		Computes the radius of all particles relative to a given point of reference
+	get_average_velocity()
+		Computes average velocity of all particles
+	delete_used_indices(indices)
+		Deletes particles from the datasets
+
+	-- Halo/region properties --
+	get_temphalo(coord, radius, fixedRadius=np.logspace(-3, 0, 1000), 
+		r200fac=1, partlim=20, satellite=False, particledata=None, mass=False, 
+		initialise_profiles=True, use_existing_r200=False)
+		Initialises a halo for a given position and radius, or particle IDs
+	get_masscenter_temphalo(particles)
+		Computes the centre of mass for given particles
+	get_radialvelocity(coord, IDs=None, indices=None)
+		Computes radial velocities of each (given) particle for a given 
+		point of reference 'coord'
+	get_angular_momentum_from_coords(coords, radius)
+		WARNING: NOT PROPERLY TESTED!
+		Computes the angular momentum 'vector length' for all particles
+		within radius 'radius' surrounding the point of reference 'coords'
+	get_spherical_coords(coords, indices)
+		WARNING: NOT PROPERLY TESTED!
+		Computes the spherical coordinates of all particles 'indices' surrounding
+		a point of reference 'coords'
+	get_spherical_coord_velocity(coords, indices)
+		WARNING: NOT PROPERLY TESTED!
+		Computes the spherical velocities of all particles 'indices' surrounding
+		a point of reference 'coords'
+	get_number_density_profile(self, coords, IDs, radius)
+		Computes the number density profile
 		
-# 		if self.physical_units:
-# 			self.boxsize /= self.h * (1. + self.redshift)
-# 			self.mass /= self.h
 
-# 		self.particledata = {}
-# 		for pT in partTypes:
-# 			if 'PartType{}'.format(int(pT)) not in self.dataopen.id:
-# 				continue
-# 			particle_temp = self.dataopen['PartType{}'.format(int(pT))]
-# 			self.particledata[pT] = {}
-# 			for dT in readData:
-# 				if dT not in particle_temp.id:
-# 					continue
-# 				self.particledata[pT][dT] = particle_temp[dT][:]
-# 				if dT == 'Velocities':
-# 					self.particledata[pT][dT] *= np.sqrt(1./(1.+self.redshift))
-
-# 				#If you want your output to be in physical units (instead of comoving and unit/h)
-# 				# if self.physical_units:
-# 				# 	if dT in ['Velocities', 'Coordinates']:
-# 				# 		self.particledata[pT][dT] *= (1./(1.+self.redshift))/self.h
-# 				# 	elif dT == 'Masses':
-# 				# 		self.particledata[pT][dT] /= self.h
-# 				# 	elif dT == 'Density':
-# 				# 		self.particledata[pT][dT] *= (1./(1.+self.redshift)/h)**3/h
-# 				# 	elif dT == 'InternalEnergy':
-# 				# 		#etc....
-# 		self.dataopen.close()
-
-#	 def open_snap(self, snappath, nsnap):
-#	 	if os.path.isfile(snappath+"snapshot_%03d.hdf5" %nsnap):
-#	 		dataopen = h5py.File(snappath+"snapshot_%03d.hdf5" %nsnap, "r")
-#	 	else:
-#	 		print("Error: Could not open %s snapshot_%03d.hdf5" %(snappath, nsnap))
-#	 	return dataopen
-
-
-
-
-class Snapshot:	
+	"""
 	def __init__(self, path, nsnap, partType=1, d_partType = None, useIDs=True, conversions=[1, 1, 1, 1], nfiles=None, nfilestart=0, debug=False,
 		softeningLength = 0.002, bigFile=False, read_only_coords=False, read_only_header=False, readIDs=True, physical=False,
 		snapshottype='GADGET'):
@@ -830,7 +881,6 @@ class Snapshot:
 			self.temphalo['Virial_ratio'] = 2*K/U
 			return self.temphalo['Virial_ratio']
 
-
 	# def get_vmax(self):
 
 	def get_temphalo_profiles(self):
@@ -1009,7 +1059,6 @@ class Snapshot:
 					Jz = np.sum(coord2[:, 0]*vel2[:, 1] - coord2[:, 1]*vel2[:, 0])
 					self.temphalo['AngularMomentum'+self.namePrefix[i_pT]][i] = np.sqrt(Jx*Jx+Jy*Jy+Jz*Jz)/len(temp2)
 
-
 	def get_Vmax_Rmax(self):
 		if not self.temphalo['exists']:
 			sys.exit("Can only use this get_Vmax_Rmax() if get_temphalo() is invoked")
@@ -1042,7 +1091,6 @@ class Snapshot:
 
 		self.temphalo["Vmax_interp"] = 0#vc[maxindx]
 		self.temphalo["Rmax_interp"] = 0#self.temphalo['distance'][:self.temphalo["virialradiusindex"]+1][sel][maxindx]
-
 
 	def get_spin_parameter(self, coords):
 		if not self.temphalo['exists']:
@@ -1104,7 +1152,6 @@ class Snapshot:
 				Jy = np.sum((coord2[:, 2]*vel2[:, 0] - coord2[:, 0]*vel2[:, 2])*massa2)
 				Jz = np.sum((coord2[:, 0]*vel2[:, 1] - coord2[:, 1]*vel2[:, 0])*massa2)
 				self.temphalo['lambda'+self.namePrefix[i_pT]] = np.sqrt(Jx*Jx+Jy*Jy+Jz*Jz)/(1.414213562*M*V*R)
-
 
 	def get_indices(self, coords = None, IDs = None, radius=None):
 		if IDs is not None:
