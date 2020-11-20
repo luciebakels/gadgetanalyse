@@ -1,6 +1,8 @@
 import numpy as np
 from collections import OrderedDict
+from scipy import integrate
 
+# List of constants
 G_cm3_gi_si2 = 6.672599e-8
 G_kpc_km2_Msi_si2 = 4.301313e-6
 G_Mpc_km2_Msi_si2 = 4.301313e-9
@@ -25,14 +27,27 @@ kB_erg_Ki = 1.380649e-16
 erg_to_eV = 6.2415e11
 hydrogen_g = 1.673724e-24
 nH_fraction = (12.0/27.0)
-deltaVir = 200.
-rhocrit_Ms_Mpci3_com = 3*(100./Mpc_to_km)**2/(8*np.pi*G_Mpc_km2_Msi_si2/(Mpc_to_km)**2)
+
+#Mass tables for different simulations, used for plotting and when snapshots are not directly read in.
+#The default is MassTable11.
 MassTable8 = [0.0026613709153710937,0.014255408365429689,0.0,0.0,0.0,0.0]
-MassTable = [3.326713644213867E-4,0.0017819260456787111,0.0,0.0,0.0,0.0]
+MassTable9 = [3.326713644213867E-4,0.0017819260456787111,0.0,0.0,0.0,0.0]
+MassTable10 = [0.0,2.643246762625122E-4,0.0,0.0,0.0,0.0]
+MassTable11 = [0.0,0.0011673820220634782,0.0,0.0,0.0,0.0]
+MassTableZoom1 = [0.033, 0.1873, 0.0058, 0, 0, 0]
+
+#Simulation specific constants
 h = 0.6751
 Om0 = 0.3121
 Ob0 = 0.0491
+deltaVir = 200.
+
+rhocrit_Ms_Mpci3_com = 3*(100./Mpc_to_km)**2/(8*np.pi*G_Mpc_km2_Msi_si2/(Mpc_to_km)**2)
+
 class constant:
+	"""
+	The purpose of this class is to reset constants according to specific cosmologies and redshifts
+	"""
 	def __init__(self, redshift=0, H0=67.51, Om0=0.3121, Ob0=0.0491):
 		self.H0 = H0
 		self.Om0 = Om0
@@ -40,9 +55,9 @@ class constant:
 		self.redshift = redshift
 		self.H = self.H0*np.sqrt(self.Om0*(1.+self.redshift)**3 + (1.-self.Om0))
 		#self.h = self.H/100.
-		self.rhocrit_Ms_kpci3 = 3*(self.H0/kpc_to_km/1e3)**2/(8*np.pi*G_kpc_km2_Msi_si2/(kpc_to_km)**2) #2.7755e2*h^2
-		self.rhocrit_Ms_Mpci3 = 3*(self.H0/Mpc_to_km)**2/(8*np.pi*G_Mpc_km2_Msi_si2/(Mpc_to_km)**2)
-		self.rhocrit_g_cmi3 = 3*(self.H0/Mpc_to_cm*1e5)**2/(8*np.pi*G_cm3_gi_si2)
+		self.rhocrit_Ms_kpci3 = 3*(self.H/kpc_to_km/1e3)**2/(8*np.pi*G_kpc_km2_Msi_si2/(kpc_to_km)**2) #2.7755e2*h^2
+		self.rhocrit_Ms_Mpci3 = 3*(self.H/Mpc_to_km)**2/(8*np.pi*G_Mpc_km2_Msi_si2/(Mpc_to_km)**2)
+		self.rhocrit_g_cmi3 = 3*(self.H/Mpc_to_cm*1e5)**2/(8*np.pi*G_cm3_gi_si2)
 
 	def change_constants(self, redshift):
 		self.redshift = redshift
@@ -61,6 +76,17 @@ class constant:
 		self.rhocrit_Ms_Mpci3_h = self.rhocrit_Ms_Mpci3*h/(h**3)
 		self.rhocrit_g_cmi3_h = self.rhocrit_g_cmi3*h/(h**3)
 
+def dt(a, H0, Om0, Ol0):
+	return 1/H0*np.sqrt(Om0/a + a*a*Ol0)*Mpc_to_km
+
+def timeDifference(z1, z2, H0=h*100, Om0=Om0):
+	"""
+	For a given redshift range, compute the time difference in seconds"
+	"""
+	a = np.sort([1./(1+z1), 1./(1+z2)])
+	return integrate.quad(dt, a[0], a[1], args=(H0, Om0, 1-Om0))[0]
+
+#Some linestyles that probably don't belong here...
 linestyles = OrderedDict(
     [('solid',               (0, ())),
      ('loosely dotted',      (0, (1, 10))),
