@@ -1,2 +1,0 @@
-from cosmocalc.cosmocalc import *
-
