@@ -10,7 +10,45 @@ from haloanalyse import *
 
 
 class OrbWeaverData:
+	"""
+	Class that contains and reads OrbWeaver data
+
+	Attributes
+	----------
+	orbitdata : dict
+		dictionary that stores the OrbWeaver data
+	filenamelist : list of str
+		list of the to be read OrbWeaver file names
+	indices : array of ints
+		array of OrbWeaver indices
+	entrytypes : list of ints
+		list of OrbWeaver entrytypes to be considered 
+		(see OrbWeaver documentation for an explanation of the types)
+	merged : bool
+		a flag when set, includes merged haloes
+
+	Functions
+	---------
+	setIndices(sort=True)
+		finds the correct indices for the list of entrytypes
+	readOrbitData(desiredfields=['HaloID_orig', 'Mass', 'OrbitID','OrbitedHaloRootProgen_orig',
+		'numorbits', 'Mass_host', 'VXrel', 'VYrel', 'VZrel', 'closestapproach','HaloRootProgen_orig',
+		'Xrel', 'Yrel', 'Zrel', 'Radius_host', 'scalefactor', 'orbitecc_ratio', 'MergedFlag'], 
+		overwrite=False, sort=True)
+		reads and saves the desired OrbWeaver fields
+	"""
 	def __init__(self, filenamelist, entrytypes=[0, 1, -1, 99, -99], merged=False):
+		"""
+		Parameters
+		----------
+		filenamelist : list of str
+			list of the to be read OrbWeaver file names
+		entrytypes : list of ints
+			list of OrbWeaver entrytypes to be considered 
+			(see OrbWeaver documentation for an explanation of the types)
+		merged : bool
+			a flag when set, includes merged haloes
+		"""
 		self.orbitdata = {}
 		self.filenamelist = filenamelist
 		self.indices = None
@@ -18,6 +56,18 @@ class OrbWeaverData:
 		self.merged = merged
 
 	def setIndices(self, sort=True):
+		"""finds the correct indices for the list of entrytypes
+		
+		Parameters
+		----------
+		sort : bool
+			a flag when set, sorts the OrbWeaver indices
+
+		Returns
+		-------
+		orbitdata : dict
+			dictionary containing the OrbWeaver data
+		"""
 		datasets = ['entrytype']
 		if self.merged == False:
 			datasets.append('MergedFlag')
@@ -48,8 +98,21 @@ class OrbWeaverData:
 
 	def readOrbitData(self, desiredfields=['HaloID_orig', 'Mass', 'OrbitID','OrbitedHaloRootProgen_orig',
 		'numorbits', 'Mass_host', 'VXrel', 'VYrel', 'VZrel', 'closestapproach','HaloRootProgen_orig',
-		'Xrel', 'Yrel', 'Zrel', 'Radius_host', 'scalefactor', 'orbitecc_ratio', 'MergedFlag'], overwrite=False, sort=True):
+		'Xrel', 'Yrel', 'Zrel', 'Radius_host', 'scalefactor', 'orbitecc_ratio', 'MergedFlag'], 
+		overwrite=False, sort=True):
+		"""Reads and saves the desired OrbWeaver fields
 
+		Parameters
+		----------
+		desiredfields : list of str, optional
+			a list containing the desired fields to put returned, please see the 
+			FieldsDescriptions.md for the list of fields availible. If not supplied 
+			then all fields are returned
+		overwrite : bool, optional
+			a flag when set, overwrites data that is already read in (default is False)
+		sort : bool, optional
+			a flag when set, sorts the OrbWeaver indices (default is True)
+		"""
 		datasets = desiredfields.copy()
 		if overwrite == False:
 			for ds in self.orbitdata.keys():
@@ -79,6 +142,7 @@ class OrbWeaverData:
 	def readOrbitData_private(self, datasets=[]):
 
 		"""
+		FROM ORBWEAVER PYTHON TOOLS:
 		Function to read in the data from the .orbweaver.orbitdata.hdf files
 		Parameters
 		----------
@@ -86,7 +150,7 @@ class OrbWeaverData:
 			The file containing the basenames for the orbweaver catalogue (can use the file generated from the creation of the (preprocessed) orbit catalogue)
 		iFileno : bool, optional
 			If True, the file number where the each of the entries came from is to be outputted.
-		desiredfields : list, optional
+		datasets : list, optional
 			A list containing the desired fields to put returned, please see the FieldsDescriptions.md for the list of fields availible. If not supplied then all fields are returned
 		Returns
 		-------
@@ -180,22 +244,143 @@ class OrbWeaverData:
 
 		return orbitdata
 
-# welke = np.where((orbitdata['MergedFlag']==False)&(orbitdata['entrytype']==0)&(orbitdata['scalefactor']==1.0)&#)[0]#&
-# 	#(orbitdata['Mass_host']<1.1e13)&(orbitdata['Mass_host']>=1e13))[0]#)[0]#&
-# 	(orbitdata['Mass_host']>=0.99*np.max(orbitdata['Mass_host'])))[0]
-
-# if rootTailhostIDs is None:
-# 	hosts = np.array(list(set(orbitdata['OrbitedHaloRootProgen_orig'][welke])))
-# 	print(len(hosts))
-# else:
-# 	hosts = rootTailhostIDs
-# hosts = np.array([35000000013844,  5000000000155, 39000000241851, 84000003812713,
-#        24000000020767, 24000000035554, 13000000004340, 21000000023022,
-#        15000000004386, 19000000017367, 11000000002269])
-
 class OrbitInfo:
-	def __init__(self, orbweaverdata, hosts=None, minhaloes=None, THIDVAL=1000000000000, physical=True, max_distance=None, max_times_r200=None,
+	"""
+	Class that uses and combines OrbWeaver data to organise TreeFrog trees and 
+	VELOCIraptor catalogues for a given selection of host haloes.
+
+	This class combines information from the trees and OrbWeaver, computes several
+	orbital properties and classifies subhaloes according to their orbital histories.
+
+	Attributes
+	----------
+	ow : Class
+		OrbWeaverData class, only initialisation of the class is necessary
+
+	-- host halo and (sub)halo selection -- 
+	max_times_r200 : float
+		closest approach of (sub)haloes to each host halo for them to be considered
+	max_distance : float
+		maximum radius to consider (sub)haloes for each host halo (not used if max_times_r200 is set)
+	r200_host : array of floats
+		array containing the virial radii of all selected host haloes
+	minhaloes : int (not working)
+		value giving the minimum number of associating (sub)haloes for a host halo to
+		be considered
+
+	-- host halo and (sub)halo indices --
+	hosts_init : list or array of ints
+		list of hosts that are considered at input
+	hosts : list or array of ints
+		list of hosts that are considered (default is None)
+	indices : list or array of ints
+		indices belonging to the OrbWeaver catalogues
+	vel_indices : array or list of ints
+		indices of the VELOCIraptor catalogues that correspond to the each OW index
+	vel_host_per_index : array or list of ints
+		root indices belonging to the VELOCIraptor catalogues (at z=0) that correspond
+		to each OW index
+	merged_indices : array or list of ints
+		indices of merged systems within the OrbWeaver catalogue
+	merged_vel_indices : array or list of ints
+		indices of merged systems in the VR catalogue that belong to each OW merged index
+	host_per_merged_index : array or list of ints
+		host of each merged system in the 'merged_indices' list
+	host_per_index : array or list of ints
+		host of each system in the 'indices' list
+	velIDs : array or list of ints
+		all VR halo IDs
+
+	-- properties of (sub)haloes --
+	distance : array of floats
+		array storing the radii of (sub)haloes relative to their host
+	dist_r200 : array of floats
+		array storing the distance of (sub)haloes relative to their host,
+		divided by r200 of their host
+	ca_r200 : array of floats
+		closest approach of (sub)haloes relative to their hosts,
+		divided by r200 of their host
+	velocity : np.array((N, 3))
+		velocities of all (sub)haloes relative to their host halo
+	vrad : array of floats
+		radial velocities of all (sub)haloes relative to their host halo
+	eccentricity : array
+		OrbWeaver eccentricity of the first measured orbit of each (sub)halo
+		associated to one of the selected hosts
+	orbits : array
+		number of orbits completed of each (sub)halo, measured by OrbWeaver
+	
+	-- catagorisation --
+	This is all outdated!!!
+	infall
+	other
+	cat1a
+	cat1b
+	cat2a
+	cat2b
+	other
+	infall
+	infallexsat
+	cat3_cat1a
+	cat3_cat1b
+	cat3_cat2a_pre
+	cat3_cat2a_post
+	cat3_cat2b
+	output_merged
+	output_notmerged
+	output_level1
+	output_level2
+
+	Functions
+	---------
+	computeIndices()
+		Function that finds the desired OrbWeaver indices
+	computeMergedIndices()
+		Function that finds the desired OrbWeaver indices for merged systems
+	find_vel_indices(ow_indices)
+		Function that finds the VELOCIraptor indices belonging to each OW index
+	output_level1_host(host, overwrite_all=False, level2 = False)
+	output_level1_subselection(indices, output_temp = None, overwrite_all=False, vel=False)
+	set_velIDs(velpath='/mnt/sshfs/pleiades/MagnusData/9p/parent/Hydro/nonrad/VELOCIraptorDM_nieuw/snapshot_200/snapshot_200')
+	calculate_main_properties()
+	cut_maximum_distance()
+	cut_maximum_distance_ca()
+	find_first_eccentricity()
+	find_first_eccentricity_merged()
+	categorise_level1(no_merger_with_self=True, ht=None, mass_dependent=True)
+	categorise_level2(no_merger_with_self=True, ht = None, mass_dependent=True)
+
+	"""
+	def __init__(self, orbweaverdata, hosts=None, minhaloes=None, THIDVAL=1000000000000, max_distance=None, max_times_r200=None,
 		newversion=True, npart_list=None, last_snap=200, skeleton_only=True):
+		"""
+		Parameters
+		----------
+		orbweaverdata : Class
+			OrbWeaverData class, only initialisation of the class is necessary
+		hosts : list or array of ints, optional
+			list of hosts that are considered (default is None)
+		THIDVAL : int
+			VELOCIraptor Temporal Halo ID Value (default is 10^12)
+		max_times_r200 : float
+			closest approach of (sub)haloes to each host halo for them to be considered
+		max_distance : float
+			maximum radius to consider (sub)haloes for each host halo (not used if max_times_r200 is set)
+		newversion : bool
+			if you use a version of OW that is newer than half-2019, use True (default is True)
+		npart_list : array of ints
+			????
+		skeleton_only : bool
+		last_snap : int
+
+		r200_host : array of floats
+			array containing the virial radii of all selected host haloes
+		minhaloes : int (not working)
+			value giving the minimum number of associating (sub)haloes for a host halo to
+			be considered
+
+		"""
+
 		self.ow = orbweaverdata
 		self._hosts_init = hosts
 		self._hosts = np.copy(np.array(self._hosts_init).astype(int))
@@ -209,7 +394,6 @@ class OrbitInfo:
 		self.level2 = False
 		self.velIDs = None
 		self.THIDVAL = THIDVAL
-		self.physical = physical
 		self.newversion = newversion
 		self.npart_list = npart_list
 		self.last_snap = last_snap
@@ -378,16 +562,6 @@ class OrbitInfo:
 			return self._ca_r200
 
 	@property
-	def infall(self):
-		if hasattr(self, "_infall"):
-			return self._infall
-
-	@property
-	def other(self):
-		if hasattr(self, "_other"):
-			return self._other
-	
-	@property
 	def cat1a(self):
 		if hasattr(self, "_cat1a"):
 			return self._cat1a
@@ -492,8 +666,6 @@ class OrbitInfo:
 			self._output_level1['host'] = self.host_per_index
 
 		return self._output_level1
-
-
 
 	@property
 	def output_level2(self):
@@ -684,8 +856,7 @@ class OrbitInfo:
 
 		return output_level1_temp
 
-
-	def set_velIDs(velpath='/mnt/sshfs/pleiades/MagnusData/9p/parent/Hydro/nonrad/VELOCIraptorDM_nieuw/snapshot_200/snapshot_200'):
+	def set_velIDs(self, velpath='/mnt/sshfs/pleiades/MagnusData/9p/parent/Hydro/nonrad/VELOCIraptorDM_nieuw/snapshot_200/snapshot_200'):
 		self.velpath = velpath
 		vel = vpt.ReadPropertyFile(velpath, ibinary=2, 
 			desiredfields=['ID'])[0]
@@ -854,7 +1025,6 @@ class OrbitInfo:
 
 		self.level1 = True
 
-
 	def categorise_level2(self, no_merger_with_self=True, ht = None, mass_dependent=True):
 		if (ht is not None) and (hasattr(self, "ht") == False):
 			self.ht = ht
@@ -996,6 +1166,33 @@ class OrbitInfo:
 			self.level2 = True
 
 def select_hosts(hd, radius=4, minmass=0, maxmass=None):
+	"""Selecting isolated hosts.
+
+	This function selects the largest haloes within a given radius*r200 that are 
+	also not within the given radius*r200 of another larger halo.
+
+	Parameters
+	----------
+	hd : Class
+		HaloData class 
+	radius : float
+		selection criteria, haloes are the largest object within radius * r200 and not
+		within radius * r200 of another larger halo (default is 4)
+	minmass : float
+		minimum mass of a host halo in units of M200 in the halo catalogue (default is 0)
+	maxmass : float, optional
+		maximum mass of a host halo in units of M200 in the halo catalogue (default is None)
+
+	Returns
+	-------
+	array
+		an array containing the VELOCIraptor halo IDs of the first appearance of each
+		isolated halo
+	array
+		an array containing the indices of the selected isolated haloes within
+		the catalogue
+	"""
+
 	hd.readData(datasets=['M200', 'RootTail', 'Coord', 'R200'])
 	hd.makeHaloCoordTree()
 	
