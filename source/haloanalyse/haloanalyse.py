@@ -16,7 +16,7 @@ import re
 import pandas as pd
 from constants import *
 from snapshot import *
-import cosmocalc as cc
+
 
 def version():
 	print("Version-1.6")
@@ -25,7 +25,20 @@ def offsetRadius(rad):
 	return np.logspace(np.log10(rad[0]) - 0.5*(np.log10(rad[-1])-np.log10(rad[0]))/len(rad), 
 		np.log10(rad[-1]) - 0.5*(np.log10(rad[-1])-np.log10(rad[0]))/len(rad), len(rad))
 
+#Snapshot to redshifts
 def snapshot_to_redshift_2048(snapshot):
+	"""The redshift belonging to each snapshot of the GENESIS 105 Mpc^3 box
+
+	Parameters
+	----------
+	snapshot : int, int list, or int array
+		snapshot number(s) of which you want to know the redshift
+
+	Returns
+	-------
+	float or array of floats
+		redshift(s) belonging to imput snapshot
+	"""
 	snaps = 1./np.array([1.000000,0.997025,0.981025,0.965281,0.949790,0.934547,0.919550,0.904792,0.890272,0.875985,0.861927,0.848094,
 		0.834484,0.821092,0.807915,0.794949,0.782192,0.769639,0.757287,0.745134,0.733176,0.721410,0.709833,0.698441,
 		0.687232,0.676203,0.665351,0.654674,0.644167,0.633830,0.623658,0.613649,0.603801,0.594111,0.584577,0.575195,
@@ -45,7 +58,23 @@ def snapshot_to_redshift_2048(snapshot):
 	return snaps[snapshot]
 
 def snapshot_to_redshift(snapshot, zstart=30, numsnap=200):
-	if numsnap == 189:
+	"""The redshift belonging to each snapshot for a logarithmic snapshot spacing
+
+	Parameters
+	----------
+	snapshot : int or int array
+		snapshot number(s) of which you want to know the redshift
+	zstart : float
+		redshift of first snapshot
+	numsnap : int
+		number of final snapshot (at z=0)
+
+	Returns
+	-------
+	float or array of floats
+		redshift(s) belonging to imput snapshot
+	"""
+	if zstart == 20:
 		return snapshot_to_redshift_2048(snapshot)
 	tstart = (1/(1+zstart))
 	tdelta = (1/tstart)**(1/numsnap)
@@ -58,34 +87,180 @@ def snapshot_to_redshift(snapshot, zstart=30, numsnap=200):
 		return 0
 	return 1/(tstart*tdelta**snapshot) - 1
 
-# subs = np.zeros(190)
-# field = np.zeros(190)
-# tot = np.zeros(190)
-# for i in range(100,190):
-# 	hatemp = HaloData('/mnt/sshfs/raijin/L105_N2048/Velcopy/', '11DM.snapshot_%03d.quantities.hdf5' %i, snapshot=i, 
-# 		totzstart = 20, totnumsnap=189, boxsize=105)
-# 	hatemp.readData(datasets=['hostHaloIndex'])
-# 	tot[i] = len(hatemp.hp['hostHaloIndex'])
-# 	subs[i] = len(np.where(hatemp.hp['hostHaloIndex']!=-1)[0])
-# 	field[i] = len(np.where(hatemp.hp['hostHaloIndex']==-1)[0])
-# 	del hatemp
+def redshift_to_snapshot(redshift, zstart=30, numsnap=200):
+	"""Closest snapshot at a given redshift for a logarithmic snapshot spacing
+	
+	Parameters
+	----------
+	snapshot : int or int array
+		snapshot number(s) of which you want to know the redshift
+	zstart : float
+		redshift of first snapshot
+	numsnap : int
+		number of final snapshot (at z=0)
 
-# plt.plot(np.log10(snapshot_to_redshift_2048(np.arange(100, 190))+1), subs[100:])
-# plt.ylabel('N$_{sub}$')
-# plt.xlabel('log[z+1]')
-# plt.tight_layout()
-# plt.show()
-
-# plt.plot(np.log10(snapshot_to_redshift_2048(np.arange(100, 190))+1), field[100:])
-# plt.ylabel('N$_{field}$')
-# plt.xlabel('log[z+1]')
-# plt.tight_layout()
-# plt.show()
+	Returns
+	-------
+	float or array of floats
+		redshift(s) belonging to imput snapshot
+	"""
+	tstart = (1/(1+zstart))
+	tdelta = (1/tstart)**(1/numsnap)
+	if isinstance(redshift, np.ndarray):
+		antwoord = np.zeros(len(redshift))
+		antwoord = np.log10(1./(redshift + 1.)/tstart)/np.log10(tdelta)
+		return np.rint(antwoord).astype(int)
+	return np.int(np.rint(np.log10(1./(redshift + 1.)/tstart)/np.log10(tdelta)))
 
 class HaloData:
+	"""
+	Class that contains, reads, and computes halo properties of one snapshot
+
+	Attributes
+	----------
+	boxsize : float
+		length of a side of the simulation box in units of the Coord field of 
+		the catalogue (often in Mpc/h)
+	haloarray : list
+		list of the fields within the halo data file
+	halocoordtree : cKDTree
+		cKDTree of the halo positions
+	hp : dict
+		dictionary that contains the properties of each halo
+	hpvel : dict
+		dictionary that contains the VR catalogue data
+	hydro : bool
+		a flag when set, reads in hydrosimulation fields
+	infofile : hdf5 file
+		private (used to open and close hdf5 files)
+	name : str
+		name of the halo property file
+	path : str
+		path to the halo property file
+	physical : bool
+		a flag when set to False, will convert the physical units of the catalogue
+		to comoving units (default is False).
+	redshift : float
+		redshift of the snapshot (default is None)
+	snapshot : int
+		snapshot number of the catalogue (default is None)
+	THIDVAL : int
+		TEMPORALHALOIDVAL from VELOCIraptor (default is 1e12)
+
+	Functions
+	---------
+	--Private--
+	allocateSizes(key, lengte)
+		Allocates the 'hp' dictionary when necessary
+	propertyDictionary(datasets=[])
+		Organises the right datatypes for each 'hp' dictionary field
+	openFile(write=False)
+		Opens the catalogue file
+	closeFile()
+		Closes the catalogue file
+	vel_correction(vel, z=0)
+		Can be changed if a velocity correction is necessary (because of mess ups...)
+	makeAllHaloCoordTree(halodata, indices=None)
+		cKDTree used for the twopointcorrelation function
+	readSharkFile(path, name, datasets=None)
+		Reads a single file within the specified SHARK catalogue
+
+	--Reading and Writing--
+	makeHaloCoordTree(indices = None)
+		Computes a cKDTree for all given haloes and stores it in halocoordtree
+	readData(datasets=[], closeFile=True, haloIndex=None)
+		Reads data for given dataset fields and stores it in the 'hp' dictionary
+	reWriteData(datasets=[])
+		Rewrites given datasets that already exist on file
+	addData(datasets=[])
+		Adds datasets that don't exist on file yet
+	replaceWithVel(halodata, datasets = None, velsets=None)
+		Replacing a halodata properties dataset with, or adding, a VR dataset
+	readVel(halodata, velsets=None)
+		Saves VR catalogue datasets to 'hpvel' dictionary
+	readSharkData(self, sharkpath = '/home/luciebakels/SharkOutput/Shark-Lagos18-final-vcut30-alpha_v-0p85/', 
+		datasets= ['id_subhalo_tree', 'mvir_hosthalo', 'mgas_bulge', 'mgas_disk', 'mhot', 'mstars_bulge', 'mstars_disk'],
+		nfolders=32)
+		Reads all galaxies.hdf5 files within the specified SHARK catalogue and saves it
+		to the dictionary 'sharkdata'
+	matchSharkData(self, haloes=None, sharkpath='/home/luciebakels/SharkOutput/Shark-Lagos18-final-vcut30-alpha_v-0p85/',
+		nfolders=32, datasets=[])
+		Matches Shark information to the correct haloes within the hp catalogue and saves it 
+		to the hp catalogue
+
+
+	--Matching haloes between run and computing gas fractions--
+	match_VELOCIraptor(velpath, matchname='IndexMatch')
+		Matches VR data of different runs by position and number of particles
+	find_bound_gas_fraction(velpath)
+		Finds gas from a hydro sim and matches it to the halodata catalogue
+	find_bound_gasparticles_withinR200(velpath, snappath)
+		Finds bound gas within R200 of each halo and matches it to the
+		halodata catalogue
+	get_DMFraction_boundgas_R200()
+		Computes the gas fractions within each halo
+
+	Not in use anymore (orbittree has replaced this functionality)
+		readNeighbourData(haloes, closeFile=True)
+			Reads halo properties of neighbouring haloes
+		getVelRadNeighbourHaloes(radius = 10, masslim = 1, addHubbleFlow=True)
+			Calculating neighbour halo properties
+
+	--Misc--
+	findR200profileIndex()
+		Returns the index of each profile closest to its R200 value
+	exactDMFractionEstimation()
+		Interpolate density profiles to find dark matter fractions in haloes
+	interpolate(dataset)
+		Interpolate a given profile
+	findDMmassWithinR200()
+		Find the DM mass within R200
+
+	twopointcorrelation(halodata=None, bins=10, average_over=10, minmax=[0, 16])
+		Computes the two point correlation function for a given range
+	twopointcorrelation_kde(haloes=None, velpath=None, bins=10, average_over=10, minmax=[0, 16], boxsize=32, z=0)
+		Computes the two point correlation function for a given range using a 
+		Gaussian kde for the estimation of the densities
+	neighbourDensity(maxdist=5)
+		Assuming an NFW profile, computes the expected background density and temperature 
+		at the location of each halo, resulting from its neighbours
+	
+	"""
 	def __init__(self, path, name, Hydro=None, snapshot=None, partType = None, new=True, TEMPORALHALOIDVAL=1000000000000, 
 		boxsize=32, extra=True, physical=False, redshift=None, totzstart=30, totnumsnap=200):
+		"""
+		Parameters
+		----------
+		path : str
+			path to the halo property file
+		name : str
+			name of the halo property file
+		Hydro : bool
+			a flag when set, reads in hydrosimulation fields
+		snapshot : int
+			snapshot number of the catalogue (default is None)
+		partType : int
+		new : bool
+		TEMPORALHALOIDVAL : int
+			from VELOCIraptor (default is 1e12)
+		boxsize : float
+			length of a side of the simulation box in units of the Coord field of 
+			the catalogue (often in Mpc/h) (default is 32 Mpc/h)
+		extra : bool
+		physical : bool
+			a flag when set to False, will convert the physical units of the catalogue
+			to comoving units (default is False).
+		redshift : float
+			redshift of the snapshot, if not given, the redshift can be calculated
+			using totzstart and totnumsnap (default is None)
+		totzstart : float
+			redshift of the first snapshot (default is 30)
+		totnumsnap : int
+			number of the last snapshot (default is 200)
+		"""
+
 		self.hp = {}
+		self.hpvel = {}
 		self.hydro = Hydro
 		self.boxsize = boxsize
 		self.THIDVAL = TEMPORALHALOIDVAL
@@ -93,8 +268,6 @@ class HaloData:
 		self.halocoordtree = None
 		self.path = path
 		self.name = name
-		self.nb = {}
-		self.bighalo = None
 		self.snapshot = snapshot
 		self.physical = physical
 		self.redshift = redshift
@@ -134,6 +307,8 @@ class HaloData:
 			self.hp[key] = None
 
 	def allocateSizes(self, key, lengte):
+		"""(Private) Allocates the 'hp' dictionary when necessary
+		"""
 		if key in ['R200', 'M200', 'redshift', 'lambda', 'Vmax', 'Rmax', 'Efrac', 'R500', 'M500', 
 				'R_HalfMass', 'Efrac', 'Ekin', 'Epot', 'cNFW', 
 				'Virial_ratio', 'COM_offset', 'Msub', 'CrossTime', 'lambdaDM', 'lambdaH', 
@@ -158,6 +333,8 @@ class HaloData:
 			return np.zeros((lengte[0], lengte[1])).astype(int)
 
 	def propertyDictionary(self, datasets=[]):
+		"""(Private) Organises the right datatypes for each 'hp' dictionary field
+		"""
 		if len(datasets) == 0:
 			datasets = self.hp.keys()
 		d_prop = {}
@@ -182,6 +359,21 @@ class HaloData:
 		return d_prop
 
 	def makeHaloCoordTree(self, indices = None):
+		"""Computes a cKDTree for all given haloes and stores it in halocoordtree
+
+		Parameters
+		----------
+		indices : array of ints, optional
+			if given, the function returns a cKDTree of the listed haloes instead
+			of saving the full tree to 'halocoordtree'
+
+		Returns
+		-------
+		None
+			if indices is not given
+		cKDTree
+			if list of indices is given
+		"""
 		if indices is None:
 			if self.halocoordtree is None:
 				if self.hp['Coord'] is None:
@@ -196,6 +388,8 @@ class HaloData:
 			return cKDTree(self.hp['Coord'][indices], boxsize=self.boxsize)
 
 	def openFile(self, write=False):
+		"""(Private) Opens the catalogue file
+		"""
 		if self.infofile is not None:
 			return 0
 		if write==True:
@@ -208,12 +402,37 @@ class HaloData:
 			sys.exit("Error: file "+self.path+self.name+" not found.")		
 
 	def closeFile(self):
+		"""(Private) Closes the catalogue file
+		"""
 		if self.infofile is None:
 			return 0
 		self.infofile.close()
 		self.infofile = None
 
 	def readData(self, datasets=[], closeFile=True, haloIndex=None):
+		"""
+		Reads data for given dataset fields and stores it in the 'hp' dictionary
+
+		This function checks for each dataset if it is already read in,
+		and only reads it in if it hasn't already. 
+
+		Properties
+		----------
+		datasets : list of str, optional
+			desired fields to be read in
+		closeFile : bool
+			a flag that can be set to False if the user wants to keep the
+			hdf5 files open. This is used as a 'private' flag for some of
+			the other functions
+		haloIndex : array of int
+			only reads in information for selected 'haloIndex' haloes
+
+		Returns
+		-------
+		None
+		"""
+
+		#Only reading in datasets that aren't already read in
 		datasetsnew = datasets.copy()
 		
 		if len(datasetsnew) == 0:
@@ -221,6 +440,9 @@ class HaloData:
 
 		removelist = []
 
+		#If only selected haloes are read in, they
+		#will need to be overwritten when this function is
+		#called again
 		overwrite = False
 		if getattr(self, "not_complete", None) is None:
 			if haloIndex is not None:
@@ -240,20 +462,25 @@ class HaloData:
 			for ds in removelist:
 				datasetsnew.remove(ds)
 
+		#If a dataset is flagged to be completely read already,
+		#is is removed from the new reading list
 		if hasattr(self, "completely_read"):
 			for rm in self.completely_read:
 				if rm in datasetsnew:
 					datasetsnew.remove(rm)
 
+		#If all desired fields are already read, return 0
 		if len(datasetsnew) == 0:
 			self.non_complete = None
 			return 0
 
-
+		#Reading the new datafields from the property file
 		self.openFile()
 
 		if haloIndex is not None:
 			ylen = 0
+			#The Radius and RadiusFix are read in regardless if the user
+			#asks for it (only exist in profile files)
 			if 'Radius'.encode('utf-8') in self.infofile.id:
 				self.hp['Radius'] = self.infofile['Radius'.encode('utf-8')][:]
 				ylen = len(self.hp['Radius'])
@@ -290,6 +517,7 @@ class HaloData:
 							self.hp[key.decode('utf-8')] = self.allocateSizes(key.decode('utf-8'), [Nhalo, ylen])
 						self.hp[key.decode('utf-8')][haloIndex] = self.infofile[key][list(haloIndex)]
 
+		#Flag datasets to be already read, for next time the function is called
 		if haloIndex is None:
 			if not hasattr(self, "completely_read"):
 				self.completely_read = datasetsnew
@@ -300,6 +528,8 @@ class HaloData:
 		if closeFile:
 			self.closeFile()
 
+		#If the output is required to be in comoving units, it
+		#converts the datasets here
 		if self.physical == False:
 			for ds in datasetsnew:
 				if ds in ['Vel', 'VX', 'VY', 'VZ']:
@@ -312,6 +542,8 @@ class HaloData:
 					self.hp[ds] *= h*(1+self.redshift)
 
 	def readNeighbourData(self, haloes, closeFile=True):
+		"""reads halo properties of neighbouring haloes
+		"""
 		datasets=['Neighbour_VelRad', 'Neighbour_Index', 'Neighbour_M200', 'Neighbour_R200', 'Neighbour_Distance']
 		
 		self.openFile()	
@@ -329,6 +561,8 @@ class HaloData:
 			self.closeFile()
 
 	def reWriteData(self, datasets=[]):
+		"""Rewrites given datasets that already exist in file
+		"""
 		self.openFile(write=True)
 
 		if len(datasets)==0:
@@ -354,6 +588,8 @@ class HaloData:
 		self.closeFile()
 
 	def addData(self, datasets=[]):
+		"""Adds datasets that don't exist in the file yet
+		"""
 		self.openFile(write=True)
 
 		for ds in datasets:
@@ -370,6 +606,19 @@ class HaloData:
 		self.closeFile()
 
 	def match_VELOCIraptor(self, velpath, matchname='IndexMatch'):
+		"""matches VR data of different runs by position and number of particles
+
+		Parameters
+		----------
+		velpath : str
+			path to the VELOCIraptor files
+		matchname : str
+			key name where the matched VR indices will be stored in the 'hp' dictionary
+
+		Returns
+		-------
+		None
+		"""
 		vel = vpt.ReadPropertyFile(velpath, ibinary=2, desiredfields=['Xcmbp', 'Xc', 
 			'Ycmbp', 'Yc', 'Zcmbp', 'Zc', 'npart', 'n_gas', 'Mass_200crit'])[0]
 		if len(vel['Xc']) == 0:
@@ -408,6 +657,17 @@ class HaloData:
 			self.hp[matchname][halo] = bestmatch
 
 	def find_bound_gas_fraction(self, velpath):
+		"""Finds gas from a hydro sim and matches it to the halodata catalogue
+
+		Parameters
+		----------
+		velpath : str
+			path to the VELOCIraptor files
+
+		Returns
+		-------
+		None
+		"""
 		if 'IndexMatch' not in self.hp.keys():
 			self.match_VELOCIraptor(velpath)
 			if len(self.hp['IndexMatch']) == 0:
@@ -441,6 +701,24 @@ class HaloData:
 			self.hp['Mass_bound'][halo] = self.hp['MassTable'][0]*gaspart+self.hp['MassTable'][1]*dmpart
 
 	def find_bound_gasparticles_withinR200(self, velpath, snappath):
+		"""Finds bound gas within R200 of each halo and matches it to the
+			halodata catalogue
+
+			The 'IndexMatch' field in the hp dictionary that links the desired
+			VR catalogue to the catalogue in this class, needs to exist.
+			This can be done with the function 'match_VELOCIraptor()'.
+
+		Parameters
+		----------
+		velpath : str
+			path to the VELOCIraptor files
+		snappath : str
+			path to the snapshot files
+
+		Returns
+		-------
+		None
+		"""
 		vel = vpt.ReadParticleDataFile(velpath, ibinary=2, iparttypes=1, unbound=False)
 		snap200 = Snapshot('/media/luciebakels/DATA1/snapshots/', 200, partType=0)
 		snap200.makeCoordTree()
@@ -463,34 +741,41 @@ class HaloData:
 			self.hp['Ngas_r200_b'][halo] = len(np.where(snapID['A'].isin(IDs))[0])
 
 	def get_DMFraction_boundgas_R200(self):
-		self.hp['DMFraction_bound_gasR200'] = self.hp['dmpart']*self.hp['MassTable'][1]/(self.hp['dmpart']*self.hp['MassTable'][1] + self.hp['Ngas_r200_b']*self.hp['MassTable'][0])
+		"""Computes the gas fractions within each halo
+
+			The fields 'Ngas_r200_b' and 'dmpart' need to be loaded
+			'Ngas_r200_b' can be computed using the function 'find_bound_gasparticles_wihinR200'
+		"""
+		self.hp['DMFraction_bound_gasR200'] = (self.hp['dmpart']*self.hp['MassTable'][1]/(self.hp['dmpart']*self.hp['MassTable'][1] + 
+			self.hp['Ngas_r200_b']*self.hp['MassTable'][0]))
 		self.hp['DMFraction_bound_gasR200'][np.where(self.hp['Ngas_r200_b']==-1)] = -1
 
-	def halo_key(self, halo, snapshot):
-		if isinstance(halo, list):
-			return np.array(halo).astype(int) + self.THIDVAL*snapshot
-		return halo + self.THIDVAL*snapshot
-
-	def key_halo(self, halokey):
-		if isinstance(halokey, np.ndarray):
-			return (halokey%self.THIDVAL).astype(int), (halokey/self.THIDVAL).astype(int)
-		elif isinstance(halokey, list):
-			return (np.array(halokey).astype(int))%self.THIDVAL, (np.array(halokey)/self.THIDVAL).astype(int)
-		else:
-			return int(halokey%self.THIDVAL), int(halokey/self.THIDVAL)
-
-	def vel_correction(vel, z=0):
+	def vel_correction(self, vel, z=0):
 		#return vel*np.sqrt(1/(1+z))
 		return vel
 
 	def getVelRadNeighbourHaloes(self, radius = 10, masslim = 1, addHubbleFlow=True):
-		"""
+		"""(Replaced by orbittree.py) Calculating neighbour halo properties.
+
 		Find radial velocity, indices, M200, R200, and distances from
 		all neighbouring halos. Then attaching the data to either the 
 		large halo or the small halo, so the information can be read 
 		from the sattellite or cluster point of view.
+
+		Parameters
+		----------
+		radius : float
+			this number times R200 of the host haloes is the radius within neighbours
+			are being selected
+		masslim : float
+			the minimum mass in units of hp['M200'] to find neighbours for
+		addHubbleFlow : bool
+			a flag if set, includes the Hubble flow when computing radial velocities
+
+		Returns
+		-------
+		None
 		"""
-		self.bighalo = bighalo
 		self.makeHaloCoordTree()
 
 		self.readData(datasets = ['M200', 'R200', 'Coord', 'Vel', 'HaloIndex', 'redshift'])
@@ -531,9 +816,9 @@ class HaloData:
 			coords = np.where(np.abs(coords) > 0.5*self.boxsize, coords - coords/np.abs(coords)*self.boxsize, coords)
 			ndisttemp = np.sqrt(np.sum(coords*coords, axis=1))
 			if addHubbleFlow:
-				velocity = vel_correction(velocity, z=z) + c.H * np.array([ndisttemp]).T/h
+				velocity = self.vel_correction(velocity, z=z) + c.H * np.array([ndisttemp]).T/h
 			else:
-				vel_correction(velocity, z=z)
+				self.vel_correction(velocity, z=z)
 			vel = (velocity[:, 0]*(coords[:, 0])*Mpc_to_km + velocity[:, 1]*(coords[:, 1])*Mpc_to_km  + 
 				velocity[:, 2]*(coords[:, 2])*Mpc_to_km)
 
@@ -559,6 +844,25 @@ class HaloData:
 				self.hp['Neighbour_VelRad'][buren[x]] = np.append(self.hp['Neighbour_VelRad'][buren[x]], velrads[x])
 
 	def replaceWithVel(self, halodata, datasets = None, velsets=None):
+		"""Replacing a 'hp' properties dataset with, or adding, a VR dataset
+
+		Parameters
+		----------
+		halodata : dict
+			VELOCIraptor catalogue
+		datasets : list of str, optional
+			list of datasets to be added or replaced by the VR catalogue,
+			if set, will replace; if not, will add (default is None)
+		velsets : list of str
+			list of VR catalogue fields that the user wants to add.
+			if the user wants to replace 'hp' datasets, it needs to have the
+			same shape and order as the 'datasets' parameter.
+
+		Returns
+		-------
+		None
+		"""
+
 		if (velsets is None) and (datasets is None):
 			return 0
 
@@ -588,14 +892,27 @@ class HaloData:
 					self.hp[datasets[dsi]][j] = halodata[vs[dsi]][indexhd]
 
 	def readVel(self, halodata, velsets=None):
+		"""Saves VR catalogue datasets to the 'hpvel' dictionary
+
+		Parameters
+		----------
+		halodata : VR catalogue
+		velsets : list of str
+			the VR fields to be copied
+
+		Returns
+		-------
+		None
+		"""
 		if velsets is None:
 			sys.exit("No VELOCIraptor given")
 
-		self.hpvel = {}
 		for vs in velsets:
 			self.hpvel[vs] = halodata[vs]
 
 	def makeAllHaloCoordTree(self, halodata, indices=None):
+		"""(Private) cKDTree used for the twopointcorrelation function
+		"""
 		if getattr(self, 'allcoordtree', None) is not None:
 			return 0
 		if indices is None:
@@ -611,11 +928,20 @@ class HaloData:
 		self.allcoordtree = cKDTree(coords, boxsize=self.boxsize)
 
 	def findR200profileIndex(self):
+		"""Returns the index of each profile closest to its R200 value
+
+		Returns
+		-------
+		array
+		"""
 		self.readData(datasets=['Radius', 'R200'])
 		return np.abs(np.subtract.outer(self.hp['Radius'], self.hp['R200'])).argmin(0)
 
 	def exactDMFractionEstimation(self):
-		self.readData(datasets=['DMFraction', 'Radius', 'RadiusFix', 'R200', 'DensityDM', 'DensityH', 'MassDM_profile', 'MassH_profile'])
+		"""Interpolate density profiles to find dark matter fractions in haloes
+		"""
+		self.readData(datasets=['DMFraction', 'Radius', 'RadiusFix', 'R200', 'DensityDM', 
+			'DensityH', 'MassDM_profile', 'MassH_profile'])
 		
 		if len(self.hp['R200']) == 0:
 			self.hp['DMFractionAdjust'] = np.zeros(0)
@@ -649,15 +975,48 @@ class HaloData:
 			self.hp['DMFractionAdjust'][i] = massDMn/(massDMn + massHn)
 
 	def interpolate(self, dataset):
+		"""Interpolate a given profile, saving the interp1d function to self.result
+
+		Parameters
+		----------
+		dataset : str
+			the name of the dataset in the profile data to interpolate over
+		"""
 		self.readData(datasets=['Radius'])
 		self.readData(datasets=[dataset])
 		self.result = interp1d(self.hp['Radius'], self.hp[dataset])
 
 	def findDMmassWithinR200(self):
+		"""Find the DM mass within R200 and saves it within the hp dictionary as 'DM_M200'
+		"""
 		self.hp['DM_M200'] = np.zeros(len(self.hp['HaloIndex']))
 		self.hp['DM_M200'] = np.where(self.hp['M200'] == -1, -1, self.hp['M200']*self.hp['DMFraction'])
 
 	def twopointcorrelation(self, halodata=None, bins=10, average_over=10, minmax=[0, 16]):
+		"""Computes the two point correlation function for a given range
+
+		The resulting 2-point correlation function found for each halo in the hp catalogue
+		will be saved to the hp dictionary with the key name: 'twopointcorrelation'.
+
+		Parameters
+		----------
+		halodata : list of dict, optional
+			VELOCIraptor catalogue: if selected, the 2-point correlation function of the areas
+			haloes in this class catalogue (hp) will be computed using ALL haloes from the 
+			VELOCIraptor catalogues, if not selected, only the subselection of haloes within
+			the hp catalogue will be used (default is None)
+		bins : int
+			number of bins to compute the 2-point correlation function for (default is 10)
+		average_over : int
+			number of times to do the random selection to get an average 'background function'
+			necessary for the computation of the 2-point correlation (default is 10)
+		minmax : list(2)
+			the radius over which the correlation function is computed
+
+		Returns
+		-------
+		None
+		"""
 		if halodata is None:
 			self.readData(datasets=['M200'])
 			self.allcoordtree = self.makeHaloCoordTree(indices = np.where(self.hp['M200'] != -1)[0])
@@ -729,6 +1088,31 @@ class HaloData:
 			self.hp['twopointcorrelation'][halo] = hr_halo/histres - 1
 
 	def twopointcorrelation_kde(self, haloes=None, velpath=None, bins=10, average_over=10, minmax=[0, 16], boxsize=32, z=0):
+		"""Computes the two point correlation function for a given range using a 
+		Gaussian kde for the estimation of the densities
+
+		The resulting 2-point correlation function found for each halo in the hp catalogue
+		will be saved to the hp dictionary with the key name: 'twopointcorrelation'.
+
+		Parameters
+		----------
+		halodata : list of dict, optional
+			VELOCIraptor catalogue: if selected, the 2-point correlation function of the areas
+			haloes in this class catalogue (hp) will be computed using ALL haloes from the 
+			VELOCIraptor catalogues, if not selected, only the subselection of haloes within
+			the hp catalogue will be used (default is None)
+		bins : int
+			number of bins to compute the 2-point correlation function for (default is 10)
+		average_over : int
+			number of times to do the random selection to get an average 'background function'
+			necessary for the computation of the 2-point correlation (default is 10)
+		minmax : list(2)
+			the radius over which the correlation function is computed
+
+		Returns
+		-------
+		None
+		"""
 		self.readData(datasets=['Coord'])
 		coords = self.hp['Coord']
 
@@ -791,6 +1175,22 @@ class HaloData:
 			self.hp['twopointcorrelation'][halo] = density(self.hp['twopointradius'])*len(dist)/antrand - 1
 
 	def neighbourDensity(self, maxdist=5):
+		"""Assuming an NFW profile, computes the expected background density and temperature 
+		at the location of each halo, resulting from its neighbours
+
+		The resulting densities and temperatures are saved to 'Neighbour_Density' and
+		'Neighbour_Temperature', respectively, in the 'hp' dictionary.
+
+		Parameters
+		----------
+		maxdist : float
+			The maximum radius in units of hp['Coord'] to find neighbouring haloes for that
+			are used for calculating the bacground densities and temperatures
+
+		Returns
+		-------
+		None
+		"""
 		if 'Neighbour_Density' in list(self.hp.keys()):
 			if getattr(self, "maxdist", None) == maxdist:
 				return 0
@@ -843,6 +1243,8 @@ class HaloData:
 					self.hp['M200'][index[waar]]*1e10, self.hp['R200'][index[waar]]))
 
 	def readSharkFile(self, path, name, datasets=None):
+		"""(Private) Reads a single file within the specified SHARK catalogue
+		"""
 		sharkdata = h5py.File(path+name, 'r')
 		d_data = {}
 		haloprop = sharkdata['galaxies'.encode('utf-8')]
@@ -857,6 +1259,24 @@ class HaloData:
 	def readSharkData(self, sharkpath = '/home/luciebakels/SharkOutput/Shark-Lagos18-final-vcut30-alpha_v-0p85/', 
 		datasets= ['id_subhalo_tree', 'mvir_hosthalo', 'mgas_bulge', 'mgas_disk', 'mhot', 'mstars_bulge', 'mstars_disk'],
 		nfolders=32):
+		"""Reads all galaxies.hdf5 files within the specified SHARK catalogue and saves it
+		to the dictionary 'sharkdata'
+
+
+		Parameters
+		----------
+		sharkpath : str
+			path to the SHARK catalogues
+		datasets : list of str
+			list of the datasets within SHARK that are being read
+		nfolders : int
+			number of subvolumes within the SHARK data
+
+		Returns
+		-------
+		None
+
+		"""
 		snaps = np.array(os.listdir(sharkpath)).astype(int)
 		sharkdata = {}
 		
@@ -894,6 +1314,26 @@ class HaloData:
 
 	def matchSharkData(self, haloes=None, sharkpath='/home/luciebakels/SharkOutput/Shark-Lagos18-final-vcut30-alpha_v-0p85/',
 		nfolders=32, datasets=[]):
+		"""Matches Shark information to the correct haloes within the hp catalogue and saves it 
+		to the hp catalogue
+
+		Parameters
+		----------
+		haloes : array of ints, optional
+			indices of haloes within the hp catalogue that are being matched to the SHARK data,
+			if not set, it will consider all haloes within the catalogue (default is None)
+		sharkpath : str
+			path to the SHARK data
+		nfolders : str
+			number of SHARK subvolumes
+		dataset : list of str
+			list of the datasets within SHARK that are being read
+
+		Returns
+		-------
+		None
+
+		"""
 		for key in ['id_subhalo_tree', 'mvir_hosthalo', 'mgas_bulge', 'mgas_disk', 'mhot', 'mstars_bulge', 'mstars_disk']:
 			datasets.append(key)
 		self.readSharkData(sharkpath=sharkpath, nfolders=nfolders, datasets=datasets)
@@ -956,6 +1396,9 @@ class HaloData:
 
 
 class HaloTree:
+	"""
+	Class that contains and computes properties of haloes over time
+	"""
 	def __init__(self, path, snapstart=0, snapend=200, Hydro=True, new=True, TEMPORALHALOIDVAL=1000000000000, 
 		new_format=False, boxsize=32., physical=False, zstart=30):
 		self.halotree = {}
@@ -1477,7 +1920,7 @@ class HaloTree:
 			if Mf[i] == 0:
 				continue
 			halo_i, snap_i = self.key_halo(index[i])
-			self.halotree[snap_i].hp['FormationTime'][halo_i] = cc.timeDifference(0, z[i], 67.51, 0.3121, 0.6879)*s_to_yr/1.e6
+			self.halotree[snap_i].hp['FormationTime'][halo_i] = timeDifference(0, z[i], 67.51, 0.3121, 0.6879)*s_to_yr/1.e6
 			self.halotree[snap_i].hp['FormationRedshift'][halo_i] = z[i]
 
 	def computePeakDMMassFraction(self, haloes):
@@ -1636,7 +2079,7 @@ class HaloTree:
 		self.readData(datasets=['M200', 'Tail', 'Coord', 'R200', 'snapshot', 'hostHaloIndex', 'HaloIndex', 
 			'DMFraction', 'redshift', 'n_part', 'Temperature', 'Radius', 'Vel', 'Mass_profile'])
 
-		self.getVelRadNeighbourHaloes(radius = radius, bighalo=False)
+		self.getVelRadNeighbourHaloes(radius = radius)
 
 		self.neighbourDensity()
 
