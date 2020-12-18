@@ -24,7 +24,28 @@ python runWriteHostHaloTree.py -c path/to/configuration/file
 =========================
 Input: Configuration file
 =========================
+An example parameter file can be found in examples/hhtree.cfg
 
+Parameters:
+-----------
+Orbweaver_path : str
+	Base path to the OrbWeaver files
+Velcopy_path : str
+	Base path to the converted VELOCIraptor files
+Output_path : str
+	Path to the folder where the tree files will be stored
+Snapend : int
+	Number of final snapshot
+Boxsize : float
+	Size of the box (GADGET: Mpc/h, SWIFT: Mpc)
+Zstart : float
+	Redshift of the first snapshot
+Massbins : int
+	Number of mass bins to divide the primary haloes over (sets the number of output files)
+Minmass : float
+	Minimum mass of a primary halo (in Msun/h)
+Minneighbours : int
+	Minimum number of neighbours for a primary to be considered
 
 ======
 Output
@@ -37,6 +58,21 @@ under the header 'Reading the Output'.
 ==================
 Reading the Output
 ==================
+Use the OrbitTree class in orbittree.py. In the function 'doealles()', some of the necessary cleaning of
+trees is done. I highly recommend using that (or pieces of that) function, since there are several functions
+that fix some errors in the original trees:
+- The R200 values of primaries are interpolated when they were subhaloes in their past, not doing this 
+results in issues in the formation times, the categorisations, and the infall times of subhaloes
+- Using the interpolated R200 values, the formation times, infall times, and number of orbits are recalculated.
+- For the categorisation, the 'R200_inter' is used.
+
+It will store all tree information in python dictionaries: d_mhtree for the primaries, d_nbtree for the neighbours.
+
+After, you can use the function 'select_by_npart_bound(ot)' to select the (sub)haloes above 
+a certain particle threshold and treelength.
+The same for the merged trees with the function 'select_by_npart_merged'.
+These functions contain dictionaries of the indices of haloes categorised by their orbital type.
+These indices correspond to the OrbitTree.d_nbtree and OrbitTree.d_nbtree_merger dictionaries.
 
 ==============================================
 Step-by-step explanation of what the code does

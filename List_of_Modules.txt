@@ -1,6 +1,7 @@
 List of modules
 ===============
 
+-----------
 snapshot.py
 -----------
 This is the backbone of the whole code and is called by most other modules
