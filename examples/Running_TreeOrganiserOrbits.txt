@@ -1,0 +1,44 @@
+This file contains a discription of how to run the code that 
+- organises the trees according to their orbital histories 
+- with regards to isolated host haloes.
+
+==============
+Before running
+==============
+VELOCIraptor, TreeFrog, and OrbWeaver files need to be written
+
+==========
+How to run
+==========
+The 'executable' is runWriteHostHaloTree.py and it needs a 
+configuration file to be run.
+
+- Executable: runWriteHostHaloTree.py
+
+- Example configuration file: example/hhtree.cfg
+-------------------------------------------------------------
+Run by calling:
+python runWriteHostHaloTree.py -c path/to/configuration/file
+-------------------------------------------------------------
+
+=========================
+Input: Configuration file
+=========================
+
+
+======
+Output
+======
+The output can be read, stored, and analysed through the 
+OrbitTree object class in the module 'orbittree.py'. An 
+explanation on how to use this object can be found below
+under the header 'Reading the Output'.
+
+==================
+Reading the Output
+==================
+
+==============================================
+Step-by-step explanation of what the code does
+==============================================
+

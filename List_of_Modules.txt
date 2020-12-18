@@ -1,0 +1,125 @@
+List of modules
+===============
+
+snapshot.py
+-----------
+This is the backbone of the whole code and is called by most other modules
+
+Class:
+	Snapshot(path, nsnap, partType=1, d_partType = None, useIDs=True, 
+		conversions=[1, 1, 1, 1], nfiles=None, nfilestart=0, debug=False,
+		softeningLength = 0.002, bigFile=False, read_only_coords=False, 
+		read_only_header=False, readIDs=True, physical=False,
+		snapshottype='GADGET')
+
+Functionality: 
+	Class used to read in and analyse GADGET or SWIFT snapshots.
+
+	This class can be used to read in complete snapshots, or just headers, IDS, coordinates, or velocities.
+	Other functionality can be used for computing properties of given regions/haloes, if either 
+	coordinates, radius, or a selection of particle IDs are given. Properties that can be computed are:
+	Centre of mass, M200, R200, central velocity, spin parameter, virial ratio, Vmax, Rmax,
+	density profile, mass profile, radial velocity profile, and the angular momemtum profile.
+
+
+------------
+constants.py
+------------
+Constants that are used by the other modules
+
+Depending on the cosmology of the simulation, some of the constants should be changed
+
+
+----------------------------
+velociraptor_python_tools.py
+----------------------------
+From Pascal Elahi, with a few additions. Used by other modules to read in info from VELOCIraptor files
+
+
+----------------
+orbweaverdata.py
+----------------
+Contains two classes and one function.
+
+Functionality:
+	Combining information from the trees and OrbWeaver, computing several
+	orbital properties and classifies subhaloes according to their orbital histories.
+
+Classes:
+1) Class that contains and reads OrbWeaver data: 
+	OrbweaverData(filenamelist, entrytypes=[0, 1, -1, 99, -99], merged=False)
+
+2) Class that uses and combines OrbWeaver data to organise TreeFrog trees and 
+	VELOCIraptor catalogues for a given selection of host haloes:
+	OrbitInfo(orbweaverdata, hosts=None, minhaloes=None, THIDVAL=1000000000000, max_distance=None, max_times_r200=None,
+		newversion=True, npart_list=None, last_snap=200, skeleton_only=True)
+
+Function:
+Function for finding isolated haloes:
+	select_hosts(hd, radius=4, minmass=0, maxmass=None)
+
+---------------------
+writeHostHaloTrees.py
+---------------------
+
+
+--------------
+haloanalyse.py
+--------------
+TODO: 
+- add direct reading from VR instead of my haloproperty catalogues
+- delete all redundant stuff
+
+Contains two classes and four functions
+This module is used for storing and computing halo properties and their trees
+
+Functionality:
+	- Reading and storing halo information on RAM
+	- Matching data from VR to SHARK
+	- Calculating two-point-correlation function
+	- Reading in all information within the tree and storing it in an object
+
+Classes:
+1) Class that contains, reads, and computes halo properties of one snapshot
+	HaloData(path, name, Hydro=None, snapshot=None, partType = None, new=True, TEMPORALHALOIDVAL=1000000000000, 
+		boxsize=32, extra=True, physical=False, redshift=None, totzstart=30, totnumsnap=200)
+
+2) Class that contains and computes properties of haloes over time
+	HaloTree(path, snapstart=0, snapend=200, Hydro=True, new=True, TEMPORALHALOIDVAL=1000000000000, 
+		new_format=False, boxsize=32., physical=False, zstart=30)
+
+
+Functions:
+- functions to convert redshifts to snapshot numbers and vice versa
+
+------------
+orbittree.py
+------------
+This module computes orbital properties and categorises (sub)haloes.
+It contains one class and 26 functions
+
+Class:
+	OrbitTree(path, zstars=20)
+
+Functionality:
+	This class can read in the organised trees that are output by the OrbitInfo class. 
+	Other functionalities are the classification of orbital histories, the identification
+	of third body interactions, and some optional fixes of the trees, which might not be
+	necessary anymore for future VELOCIraptor versions. This class also allows for easy
+	overwriting and adding of additional fields to the trees and combining information from
+	SHARK and VELOCIraptor outputs.
+
+Functions:
+- functions for the selection of (sub)haloes by their properties
+- function to read profiles from data (this should go somewhere else)
+- function for Einasto profiles (should go somewhere else)
+- functions to compute extra virial properties (should go somewhere else)
+- functions to compute Vmax and Rmax (should go somewhere else)
+
+---------------------
+GasDensityProfiles.py
+---------------------
+
+------------------
+writeproperties.py
+------------------
