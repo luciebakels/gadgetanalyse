@@ -508,7 +508,7 @@ class HaloData:
 				continue
 				
 			self.hp[ds] = self.allocateSizes(ds, [int(Nhalo), 0])
-			
+
 			if ds == 'Coord':
 				self.hp[ds][:, 0] = vel['Xcminpot']
 				self.hp[ds][:, 1] = vel['Ycminpot']
@@ -529,7 +529,7 @@ class HaloData:
 			else:
 				self.hp[ds] = vel[velset]
 
-	def openFileTF(snapshot):
+	def openFileTF(self, snapshot):
 		hdffile = h5py.File(self.tf_path, 'r')
 		numsnaps = hdffile['Header'].attrs["NSnaps"]
 
@@ -591,7 +591,7 @@ class HaloData:
 		
 		#Reading the relevant TreeFrog data
 		if ('Head' in datasetsnew) or ('Tail' in datasetsnew) or ('RootHead' in datasetsnew) or ('RootTail' in datasetsnew):
-			tree = openFileTF(self.snapshot)
+			tree = self.openFileTF(self.snapshot)
 			if 'Head' in datasetsnew:
 				self.hp['Head'] = tree['Head'] - 1
 			if 'Tail' in datasetsnew:
