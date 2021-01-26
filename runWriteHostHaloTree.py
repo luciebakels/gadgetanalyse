@@ -49,6 +49,7 @@ class Params:
 		self.runparams = {}
 		self.runparams['Maxmass'] = None
 		self.paths['Output_name'] = 'HaloTrees_'
+		self.runparams['VELOCIraptor'] = False
 		with open(configfile,"r") as f:
 
 			for line in f:
