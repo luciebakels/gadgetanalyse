@@ -416,6 +416,7 @@ class HaloData:
 		if self.infofile is not None:
 			return 0
 
+		print(self.path)
 		if os.path.isfile(self.path + '/snapshot_%03d.properties') or os.path.isfile(self.path + '/snapshot_%03d.properties.0'):
 			temp_name = self.path + '/snapshot_%03d'
 		elif os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.properties') or os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.properties.0'):
