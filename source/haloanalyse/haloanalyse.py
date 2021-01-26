@@ -416,7 +416,6 @@ class HaloData:
 		if self.infofile is not None:
 			return 0
 
-		print(self.path)
 		if os.path.isfile(self.path + '/snapshot_%03d.properties' %self.snapshot) or os.path.isfile(self.path + '/snapshot_%03d.properties.0' %self.snapshot):
 			temp_name = self.path + '/snapshot_%03d' %self.snapshot
 		elif os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.properties' %(self.snapshot, self.snapshot)) or os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.properties.0' %(self.snapshot, self.snapshot)):
@@ -472,7 +471,7 @@ class HaloData:
 			elif ds in (['R_HalfMass', 'Efrac', 'Ekin', 'cNFW',	'Epot', 'R_size', 'Rmax', 'Vmax', 'npart', 'n_gas']):
 				desiredfields.append(ds)
 
-		vel, numhalo, atime = vpt.ReadPropertyFile(temp_name, ibinary=2, desiredfields=desiredfields)
+		vel, numhalo, atime = vpt.ReadPropertyFile(temp_name, desiredfields=desiredfields)
 
 		if haloIndex is not None:
 			Nhalo = len(vel[desiredfields[0]])
