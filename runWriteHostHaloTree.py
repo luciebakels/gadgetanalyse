@@ -74,6 +74,10 @@ class Params:
 				elif line[0] in ['Boxsize', 'Zstart', 'Minmass', 'Maxmass']:
 					self.runparams[line[0]] = float(line[1])
 
+				elif line[0] in ['VELOCIraptor']:
+					self.runparams[line[0]] = bool(line[1])
+					print(self.runparams['VELOCIraptor'])
+
 #Reading command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-c",action="store",dest="configfile",help="Configuration file (hostHaloTree.cfg)",required=True)
@@ -99,7 +103,8 @@ owd = ow.OrbWeaverData(orbpath)
 owd.readOrbitData()
 
 print("Read halo data")
-ht = ha.HaloTree(htpath, new_format=True, physical = False, boxsize=boxsize, zstart=zstart, snapend=snapend)
+ht = ha.HaloTree(htpath, new_format=True, physical = False, boxsize=boxsize, zstart=zstart, snapend=snapend, 
+	VELOCIraptor=self.runparams['VELOCIraptor'], TreeFrog_path=tfpath)
 ht.readData(datasets=['RootHead', 'RootTail', 'Tail', 'Head', 'hostHaloIndex', 'hostHaloID', 'M200', 'npart', 
 	'Vel', 'R200', 'Vmax', 'Rmax', 'Coord', 'Efrac', 'cNFW'])
 for i in ht.halotree.keys():
