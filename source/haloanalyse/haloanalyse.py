@@ -471,14 +471,13 @@ class HaloData:
 			elif ds in (['R_HalfMass', 'Efrac', 'Ekin', 'cNFW',	'Epot', 'R_size', 'Rmax', 'Vmax', 'npart', 'n_gas']):
 				desiredfields.append(ds)
 
-		print(desiredfields)
 		if len(desiredfields) == 0:
 			return 0
 
 		vel, numhalo, atime = vpt.ReadPropertyFile(temp_name, desiredfields=desiredfields)
 
 		Nhalo = len(vel[desiredfields[0]])
-		print(vel.keys())
+		print(Nhalo)
 
 		self.hp['redshift'] = 1/atime - 1
 		for velset in desiredfields:
@@ -510,7 +509,7 @@ class HaloData:
 				continue
 				
 			self.allocateSizes(ds, [Nhalo, 0])
-			if len(Nhalo) == 0:
+			if Nhalo == 0:
 				continue
 			print(ds, velset)
 			if ds == 'Coord':
