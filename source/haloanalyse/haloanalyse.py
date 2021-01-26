@@ -417,16 +417,16 @@ class HaloData:
 			return 0
 
 		print(self.path)
-		if os.path.isfile(self.path + '/snapshot_%03d.properties') or os.path.isfile(self.path + '/snapshot_%03d.properties.0'):
-			temp_name = self.path + '/snapshot_%03d'
-		elif os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.properties') or os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.properties.0'):
-			self.path = self.path + '/snapshot_%03d/'
-			temp_name = self.path + '/snapshot_%03d'
-		elif os.path.isfile(self.path + '/snapshot_%03d.VELOCIraptor.properties') or os.path.isfile(self.path + '/snapshot_%03d.VELOCIraptor.properties.0'):
-			temp_name = self.path + '/snapshot_%03d.VELOCIraptor'
-		elif os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.VELOCIraptor.properties') or os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.VELOCIraptor.properties.0'):
-			self.path = self.path + '/snapshot_%03d/'
-			temp_name = self.path + '/snapshot_%03d.VELOCIraptor'
+		if os.path.isfile(self.path + '/snapshot_%03d.properties' %self.snapshot) or os.path.isfile(self.path + '/snapshot_%03d.properties.0' %self.snapshot):
+			temp_name = self.path + '/snapshot_%03d' %self.snapshot
+		elif os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.properties' %(self.snapshot, self.snapshot)) or os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.properties.0' %(self.snapshot, self.snapshot)):
+			self.path = self.path + '/snapshot_%03d/' %self.snapshot
+			temp_name = self.path + '/snapshot_%03d' %self.snapshot
+		elif os.path.isfile(self.path + '/snapshot_%03d.VELOCIraptor.properties' %self.snapshot) or os.path.isfile(self.path + '/snapshot_%03d.VELOCIraptor.properties.0' %self.snapshot):
+			temp_name = self.path + '/snapshot_%03d.VELOCIraptor' %self.snapshot
+		elif os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.VELOCIraptor.properties' %(self.snapshot, self.snapshot)) or os.path.isfile(self.path + '/snapshot_%03d/snapshot_%03d.VELOCIraptor.properties.0' %(self.snapshot, self.snapshot)):
+			self.path = self.path + '/snapshot_%03d/' %self.snapshot
+			temp_name = self.path + '/snapshot_%03d.VELOCIraptor' %self.snapshot
 		else:
 			sys.exit("The VELOCIraptor path is incorrect, or the name convention is different for the version you are using.\n Change this in the openFileVR function in haloanalyse.py.")
 
