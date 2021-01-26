@@ -314,7 +314,6 @@ class HaloData:
 				'R_HalfMass', 'Efrac', 'Ekin', 'Epot', 'cNFW', 
 				'Virial_ratio', 'COM_offset', 'Msub', 'CrossTime', 'lambdaDM', 'lambdaH', 
 				'DMFraction', 'HFraction', 'lambdaS', 'SFraction']:
-			print(lengte[0], np.ones(lengte[0])*-1)
 			return np.ones(lengte[0])*-1
 
 		if key in ['HaloIndex', 'HaloID', 'hostHaloID', 'snapshot', 'Npart', 'NpartH', 'NpartDM', 'NpartS', 'npart',
@@ -508,11 +507,8 @@ class HaloData:
 			else:
 				continue
 				
-			self.allocateSizes(ds, [int(Nhalo), 0])
-			print(ds, self.hp[ds])
-			if Nhalo == 0:
-				continue
-			print(ds, velset)
+			self.hp[ds] = self.allocateSizes(ds, [int(Nhalo), 0])
+			
 			if ds == 'Coord':
 				self.hp[ds][:, 0] = vel['Xcminpot']
 				self.hp[ds][:, 1] = vel['Ycminpot']
