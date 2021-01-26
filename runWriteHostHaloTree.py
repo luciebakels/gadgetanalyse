@@ -104,7 +104,7 @@ owd.readOrbitData()
 
 print("Read halo data")
 ht = ha.HaloTree(htpath, new_format=True, physical = False, boxsize=boxsize, zstart=zstart, snapend=snapend, 
-	VELOCIraptor=self.runparams['VELOCIraptor'], TreeFrog_path=tfpath)
+	VELOCIraptor=param.runparams['VELOCIraptor'], TreeFrog_path=tfpath)
 ht.readData(datasets=['RootHead', 'RootTail', 'Tail', 'Head', 'hostHaloIndex', 'hostHaloID', 'M200', 'npart', 
 	'Vel', 'R200', 'Vmax', 'Rmax', 'Coord', 'Efrac', 'cNFW'])
 for i in ht.halotree.keys():
