@@ -535,7 +535,7 @@ class HaloData:
 		for key in hdffile['Snapshots']['Snap_%03d' %snapshot].keys():
 			halodata[key] = np.array(
 				hdffile['Snapshots']['Snap_%03d' %snapshot][key])
-	    hdffile.close()
+		hdffile.close()
 
 		return halodata
 
