@@ -626,7 +626,7 @@ class HaloData:
 		"""
 
 		if self.VELOCIraptor:
-			self.readDataVELOCIraptor(datasets=datasets, closeFile=closeFile, haloIndex=haloIndex)
+			self.readDataVELOCIraptor(datasets=datasets)
 			return 0
 
 		#Only reading in datasets that aren't already read in
