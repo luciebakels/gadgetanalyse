@@ -148,7 +148,8 @@ def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=N
                 else:
                     catalog[catvalue][noffset:noffset+numhalos]=htemp[i]
         noffset+=numhalos
-        noffset_hl += int(len(ww))
+        if halolist is not None:
+            noffset_hl += int(len(ww))
 
     if (iverbose): print("done reading properties file ",time.clock()-start)
     return catalog,numtothalos,atime
