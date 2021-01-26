@@ -471,6 +471,10 @@ class HaloData:
 			elif ds in (['R_HalfMass', 'Efrac', 'Ekin', 'cNFW',	'Epot', 'R_size', 'Rmax', 'Vmax', 'npart', 'n_gas']):
 				desiredfields.append(ds)
 
+		print(desiredfields)
+		if len(desiredfields) == 0:
+			return 0
+
 		vel, numhalo, atime = vpt.ReadPropertyFile(temp_name, desiredfields=desiredfields)
 
 		Nhalo = len(vel[desiredfields[0]])
@@ -570,7 +574,7 @@ class HaloData:
 			return 0
 
 		#Reading the new datafields from the VR catalogue and storing it in self.hp
-		self.openFileVR()
+		self.openFileVR(datasets=datasetsnew)
 
 		#If the output is required to be in comoving units, it
 		#converts the datasets here
