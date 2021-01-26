@@ -476,7 +476,7 @@ class HaloData:
 
 		vel, numhalo, atime = vpt.ReadPropertyFile(temp_name, desiredfields=desiredfields)
 
-		Nhalo = len(vel[desiredfields[0]])
+		Nhalo = numhalo
 
 		self.hp['redshift'] = 1/atime - 1
 		for velset in desiredfields:
