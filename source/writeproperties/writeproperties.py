@@ -637,7 +637,7 @@ def findHaloProperties(d_snap, halo, Coord, fixedRadius, r200fac = 8, partType=N
 		if debug:
 			start_time = time.time()
 		if (satellite == False) or (particledata is not None):
-			snap.get_spin_parameter(coord)
+			snap.get_spin_parameter()
 			haloproperties['lambda'] = snap.temphalo['lambda']
 		haloproperties['lambda'] = snap.temphalo['lambda']
 

@@ -220,7 +220,7 @@ if param.runparams['TreeData']:
 Nhalo = int(haloes)
 if halolist is not None:
 	Nhalo = len(halolist)
-haloproperties = findHaloPropertiesInSnap_nieuw(catalog, d_snap, d_runparams = param.runparams, halolist=None,
+haloproperties = findHaloPropertiesInSnap_nieuw(catalog, d_snap, d_runparams = param.runparams, halolist=halolist,
 	partdata=partdata, d_radius=param.rad, d_partType=param.d_partType, Nhalo=Nhalo, startHalo=0, 
 	boxsize=boxsize, debug=debug)
 

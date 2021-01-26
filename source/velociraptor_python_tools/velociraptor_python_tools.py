@@ -135,7 +135,6 @@ def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=N
         if numhalos > 0:
             if halolist is not None:
                 ww = haloindices[np.where((haloindices >= noffset)&(haloindices < noffset+numhalos))[0]] - noffset
-                print(ww[0], ww[-1], np.min(ww), np.max(ww))
                 htemp = [np.array(halofile[catvalue])[ww] for catvalue in fieldnames]
             else:
                 htemp=[np.array(halofile[catvalue]) for catvalue in fieldnames]

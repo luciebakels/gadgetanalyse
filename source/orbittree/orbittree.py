@@ -559,7 +559,7 @@ class OrbitTree:
 	def categorise(self, R200type='R200_inter'):
 		"""Categorise (sub)haloes according to their orbital history
 
-		- infalling subhaloes: orbits==0 and subhalo==True
+		- first-infall subhaloes: orbits==0 and subhalo==True
 		- orbital satellites: orbits_after_infall>0 and subhalo==True
 		- backsplash haloes: notcrossed==False and subhalo==False
 		- orbital halo: (orbits>0 and notcrossed==True) or (orbits_after_infall==0.5 and orbits>0))
@@ -600,7 +600,7 @@ class OrbitTree:
 			#ca = nbtree['closest_approach']/mhtree[R200type][-1]
 
 			self.d_categorise[host] = {}
-			self.d_categorise[host]['infalling subhaloes'] = np.where((subhalo==True)&(borninside==False)&(nperi==0)&(orbits_ai==0))[0]#&(ca>=0.9*afstandnu))[0]
+			self.d_categorise[host]['first-infall subhaloes'] = np.where((subhalo==True)&(borninside==False)&(nperi==0)&(orbits_ai==0))[0]#&(ca>=0.9*afstandnu))[0]
 			self.d_categorise[host]['orbital subhaloes'] = np.where((subhalo==True)&(borninside==False)&((orbits_ai>0)))[0]#|(ca<0.9*afstandnu)))[0]
 
 			self.d_categorise[host]['backsplash haloes'] = np.where((mindist_r200<=4)&(borninside==False)&(notcrossed==False)&(subhalo==False))[0]
@@ -750,13 +750,14 @@ class OrbitTree:
 		if d_output is None:
 			d_output = self.d_categorise
 
-		for key in ['id_subhalo_tree', 'id_halo_tree', 'mvir_hosthalo', 'type', 'mvir_subhalo', 'mgas_bulge', 'mgas_disk', 'mhot', 'mstars_bulge', 'mstars_disk']:
+		for key in (['id_subhalo_tree', 'id_halo_tree', 'mvir_hosthalo', 'type', 'mvir_subhalo', 
+			'mgas_bulge', 'mgas_disk', 'mhot', 'mstars_bulge', 'mstars_disk', 'mean_stellar_age']):
 			datasets.append(key)
 		
 		self.readNeighbourTree(datasets=['HaloIndex'])
 		
 		#Reading in HaloData file that has the combined VR+TF catalogue
-		keys = (['infalling subhaloes', 'orbital subhaloes', 'backsplash haloes', 'pristine haloes', 'secondary backsplash', 
+		keys = (['first-infall subhaloes', 'orbital subhaloes', 'backsplash haloes', 'pristine haloes', 'secondary backsplash', 
 			'secondary subhaloes', 'orbital haloes ($<$r$_{200}$)', 'orbital haloes ($>$r$_{200}$)'])
 		start_time = time.time()
 
@@ -798,12 +799,21 @@ class OrbitTree:
 
 		start_time = time.time()
 		for host in hosts:
-			#List IDs of all subhaloes in the neighbourtree beloning to 'host'
-			subhaloids = np.zeros(0).astype(int)
-			welke = np.zeros(0).astype(int)
-			for key in keys: #TODO: optimise this by allocating the array first, very easy...
-				subhaloids = np.append(subhaloids, self.d_nbtree[host]['HaloIndex'][d_output[host][key], -1])
-				welke = np.append(welke, d_output[host][key])
+			#List IDs of all subhaloes in the neighbourtree belonging to 'host'
+
+			#Allocating arrays...
+			aantal = 0
+			for key in keys:
+				aantal += len(d_output[host][key])
+			subhaloids = np.zeros(aantal).astype(int)
+			welke = np.zeros(aantal).astype(int)
+			#Writing information to allocated arrays...
+			ii = 0
+			for key in keys:
+				lentemp = ii+len(d_output[host][key])
+				subhaloids[ii:lentemp] = self.d_nbtree[host]['HaloIndex'][d_output[host][key], -1]
+				welke[ii:lentemp] = d_output[host][key]
+				ii = lentemp
 			haloid = self.d_mhtree[host]['HaloIndex'][-1]
 
 			#Allocate memory
@@ -854,6 +864,7 @@ class OrbitTree:
 						self.d_nbtree[host][ds+'_main'][welke[halo]] = hd.sharkdata[ds][allgalaxies[maingal]]
 
 			#Do the same for the host tree
+			subhaloids = self.d_mhtree[host]['HaloIndex'][-1]
 			if old_shark_version:
 				my_haloes_match = hd.hp['Tail'][subhaloids] + 1
 			else:
@@ -1532,7 +1543,7 @@ def select_by_shark_stellarmass(ot, d_output_in=None, minmass=1e8, maxmass=None)
 	
 def select_by_npart_merged(ot, minpart=50, nparttype='npart', min_snapshots=8):
 	"""Returns selection of d_categorise of merged neighbours that have a minimum particle number 'minpart'
-	and a minimum snapshot length 'min_snapshots'.
+	at first infall, and a minimum snapshot length 'min_snapshots'.
 
 	Parameters
 	----------

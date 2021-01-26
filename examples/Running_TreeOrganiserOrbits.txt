@@ -5,7 +5,7 @@ This file contains a discription of how to run the code that
 ==============
 Before running
 ==============
-VELOCIraptor, TreeFrog, and OrbWeaver files need to be written
+VELOCIraptor, TreeFrog (WalkableHDFTree), and OrbWeaver files need to be written
 
 ==========
 How to run
@@ -31,7 +31,9 @@ Parameters:
 Orbweaver_path : str
 	Base path to the OrbWeaver files
 Velcopy_path : str
-	Base path to the converted VELOCIraptor files
+	Base path to the converted (or original) VELOCIraptor files
+TreeFrog_path : str
+	Path to the walkable HDF TreeFrog tree
 Output_path : str
 	Path to the folder where the tree files will be stored
 Snapend : int
