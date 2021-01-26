@@ -466,7 +466,7 @@ class HaloData:
 				desiredfields.append('Lz')
 			elif ds == 'lambda':
 				desiredfields.append('lambda_B')
-			elif velset == 'hostHaloID':
+			elif ds == 'hostHaloID':
 				desiredfields.append('hostHaloID')
 			elif ds in (['R_HalfMass', 'Efrac', 'Ekin', 'cNFW',	'Epot', 'R_size', 'Rmax', 'Vmax', 'npart', 'n_gas']):
 				desiredfields.append(ds)
