@@ -116,7 +116,7 @@ for i in ht.halotree.keys():
 		ht.halotree[i].hp['hostHaloIndex'] = np.copy(ht.halotree[i].hp['hostHaloID'])
 		fixSatelliteProblems(ht.halotree[i].hp, boxsize=boxsize)
 		if param.runparams['VELOCIraptor'] == False:
-			print("Write changes hostHaloIndeces to catalogues")
+			print("Write changed hostHaloIndeces to catalogues")
 			ht.halotree[i].addData(datasets=['hostHaloIndex'])
 
 print("Selecting isolated hosts")
@@ -140,7 +140,7 @@ for i in range(len(mass_bins) - 1):
 	print("Processing hosts between", mass_bins[k-j], "and", mass_bins[k+1], ":", len(waar_temp))
 	hosts_temp = np.array(hosts_all[waar_temp])
 	mainhaloes_temp = np.array(mainhaloes_all[waar_temp])
-	oi = ow.OrbitInfo(owd, hosts=hosts_temp, physical=False, max_times_r200=4, 
+	oi = ow.OrbitInfo(owd, hosts=hosts_temp, max_times_r200=4, 
 		npart_list=ht.halotree[ht.snapend].hp['npart']*ht.halotree[ht.snapend].hp['Efrac'], 
 		skeleton_only=True)
 	#Efrac_cut(oi, ht.halotree[ht.snapend].hp, Efrac_limit=0.8)
