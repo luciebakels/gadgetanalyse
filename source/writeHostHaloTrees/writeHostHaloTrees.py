@@ -604,7 +604,7 @@ def find_preprocess(ht, nbtree, mh_tree, merged=False, find_infalling_groups=Tru
 	Preprocessing must happen BEFORE first infall
 	Postprocessing must happen AFTER first infall
 
-	In case of merged=True, all neighbours are assumed to have merged with the host. The preprocess host mass
+	In case of merged=True, all neighbours are assumed to have merged with the host. The preprocessed host mass
 	at encounter must be larger than the mass of the neighbour, but it also needs to be larger than the neighbours'
 	mass at its first infall. A postprocessed host only has to be larger than the neighbour at time of encounter.
 
@@ -771,6 +771,8 @@ def find_preprocess(ht, nbtree, mh_tree, merged=False, find_infalling_groups=Tru
 
 def fixSatelliteProblems(hp, TEMPORALHALOIDVAL=1000000000000, boxsize=32):
 	hp['Coord'] = hp['Coord']%boxsize
+	if len(hp['Coord']) == 0:
+		return 0
 	halotree = cKDTree(hp['Coord'], boxsize=boxsize)
 
 	# toolarge = np.where(hp['R200'] > hp['R200'][np.argmax(hp['npart'])]*1.2)[0]
