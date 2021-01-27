@@ -116,6 +116,7 @@ for i in ht.halotree.keys():
 		ht.halotree[i].hp['hostHaloIndex'] = np.copy(ht.halotree[i].hp['hostHaloID'])
 		fixSatelliteProblems(ht.halotree[i].hp, boxsize=boxsize)
 		if param.runparams['VELOCIraptor'] == False:
+			print("Write changes hostHaloIndeces to catalogues")
 			ht.halotree[i].addData(datasets=['hostHaloIndex'])
 
 print("Selecting isolated hosts")
