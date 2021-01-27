@@ -32,8 +32,8 @@ Orbweaver_path : str
 	Base path to the OrbWeaver files
 Velcopy_path : str
 	Base path to the converted (or original) VELOCIraptor files
-TreeFrog_path : str
-	Path to the walkable HDF TreeFrog tree
+TreeFrog_path : str, optional
+	Path to the walkable HDF TreeFrog tree, only needs to be set if the VELOCIraptor flag is set
 Output_path : str
 	Path to the folder where the tree files will be stored
 Snapend : int
@@ -45,9 +45,13 @@ Zstart : float
 Massbins : int
 	Number of mass bins to divide the primary haloes over (sets the number of output files)
 Minmass : float
-	Minimum mass of a primary halo (in Msun/h)
+	Minimum mass of a primary halo (in 1e10 Msun/h)
+Maxmass : float, optional
+	Maximum mass of a primary halo (in 1e10 Msun/h)
 Minneighbours : int
 	Minimum number of neighbours for a primary to be considered
+VELOCIraptor : bool
+	if True, reads directly the VR and TF catalogue. The inconvenience is that new fields are not written to the catalogue. Trees and subhaloes are always defined according to M200 of the host, but if this flag is set, the 'hostHaloIndex' catalogue will remain that of the 6DFOF definition as calculated by VR.
 
 ======
 Output
