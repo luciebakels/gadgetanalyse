@@ -77,7 +77,7 @@ class Params:
 
 				elif line[0] in ['VELOCIraptor']:
 					self.runparams[line[0]] = bool(line[1])
-					print(self.runparams['VELOCIraptor'])
+					print("Reading halodata from VR and TF catalogues:", self.runparams['VELOCIraptor'])
 
 #Reading command line arguments
 parser = argparse.ArgumentParser()
@@ -115,7 +115,8 @@ for i in ht.halotree.keys():
 		print("Make hostHaloIndices for snapshot", i)
 		ht.halotree[i].hp['hostHaloIndex'] = np.copy(ht.halotree[i].hp['hostHaloID'])
 		fixSatelliteProblems(ht.halotree[i].hp, boxsize=boxsize)
-		ht.halotree[i].addData(datasets=['hostHaloIndex'])
+		if param.runparams['VELOCIraptor'] == False:
+			ht.halotree[i].addData(datasets=['hostHaloIndex'])
 
 print("Selecting isolated hosts")
 hosts_all, mainhaloes_all = ow.select_hosts(ht.halotree[ht.snapend], minmass=minmass, maxmass=maxmass, radius = 8)

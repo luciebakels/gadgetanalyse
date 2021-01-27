@@ -30,7 +30,7 @@ Routines for reading velociraptor output
 """
     IO Routines
 """
-def ReadPropertyFile(basefilename,iverbose=1, desiredfields=[], selected_files=None, halolist=None,
+def ReadPropertyFile(basefilename,iverbose=0, desiredfields=[], selected_files=None, halolist=None,
     TEMPORALHALOIDVAL = 1000000000000):
     """
     VELOCIraptor/STF files in various formats
