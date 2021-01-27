@@ -624,7 +624,7 @@ def find_preprocess(ht, nbtree, mh_tree, merged=False, find_infalling_groups=Tru
 	matrix_temp = nbtree['hostHaloIndex']%ht.THIDVAL - hostids[None, :]
 
 	i_halonb, snapnb = np.where((nbtree['hostHaloIndex'] > 0) & (matrix_temp != 0))
-	#poss_prehost_index = nbtree['hostHaloIndex'][i_halonb, snapnb]# + snapnb*ht.THIDVAL
+	poss_prehost_index = nbtree['hostHaloIndex'][i_halonb, snapnb]%ht.THIDVAL# + snapnb*ht.THIDVAL
 	neighbour_index = nbtree['HaloIndex'][i_halonb, snapnb]
 
 	if merged:
@@ -639,7 +639,7 @@ def find_preprocess(ht, nbtree, mh_tree, merged=False, find_infalling_groups=Tru
 
 	poss_prehost_roothead = np.zeros(len(i_halonb)).astype(int)
 	halonb_roothead = np.zeros(len(i_halonb)).astype(int)
-	poss_prehost_index = (ht.key_halo(poss_prehost)[0]).astype(int)
+	#poss_prehost_index = (ht.key_halo(poss_prehost)[0]).astype(int)
 	poss_prehost_npart = np.zeros(len(i_halonb)).astype(int)
 	snaps = np.unique(snapnb)
 	for snap in snaps:
